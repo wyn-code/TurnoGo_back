@@ -1,6 +1,27 @@
-from app.main import app
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-if __name__ == "__main__":
-    import uvicorn
+app = FastAPI()
 
-    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
+origins = [
+    "http://localhost:5173"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.get("/test")
+def test():
+    return {"message": "Backend funcionando 🚀"}
+
+@app.get("/categorias")
+def listar_categorias():
+    return [
+        {"id": 1, "name": "Peluquería", "icon": "scissors"},
+        {"id": 2, "name": "Spa", "icon": "sparkles"},
+    ]
