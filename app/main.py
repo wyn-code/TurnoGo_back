@@ -1,8 +1,6 @@
 from fastapi import FastAPI
-
-from app.routers import usuario, turno_router, empleado_router, negocio_router
+from app.routers import usuario, turno_router, empleado_router, servicio_router, negocio_router
 from app.db.base import engine, text
-
 
 app = FastAPI(title="Turnexo")
 
@@ -19,8 +17,9 @@ def test_db():
         return {"resultado": result.scalar()}
 
 
-# Incluir routers
-app.include_router(usuario.router, prefix="/api")
-app.include_router(turno_router.router, prefix="/api")
-app.include_router(empleado_router.router, prefix="/api")
+# 🔥 IMPORTANTE: incluir routers
+app.include_router(usuario.router, prefix="/api", tags=["Usuarios"])
+app.include_router(turno_router.router, prefix="/api", tags=["Turnos"])
+app.include_router(empleado_router.router, prefix="/api", tags=["Empleados"])
+app.include_router(servicio_router.router, prefix="/api")
 app.include_router(negocio_router.router, prefix="/api")
