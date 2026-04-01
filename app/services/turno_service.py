@@ -17,7 +17,7 @@ def obtener_turno_por_id(db: Session, turno_id: int):
     return db.query(Turno).filter(Turno.id_turno == turno_id).first()
 
 
-# 🔥 Validación de solapamiento
+
 def hay_superposicion(db: Session, id_empleado: int, inicio, fin, excluir_turno_id=None):
     query = db.query(Turno).filter(
         Turno.id_empleado == id_empleado,
@@ -25,7 +25,6 @@ def hay_superposicion(db: Session, id_empleado: int, inicio, fin, excluir_turno_
         Turno.fecha_hora_fin > inicio
     )
 
-    # Para updates (evitar compararse consigo mismo)
     if excluir_turno_id:
         query = query.filter(Turno.id_turno != excluir_turno_id)
 
@@ -43,21 +42,19 @@ def crear_turno(db: Session, turno: TurnoCrear):
             detail="El servicio no existe"
         )
 
-    # ⏱ Calcular fecha_fin si no viene
+
     fecha_hora_fin = turno.fecha_hora_fin
     if fecha_hora_fin is None:
         fecha_hora_fin = turno.fecha_hora_inicio + timedelta(
             minutes=servicio.duracion_min
         )
 
-    # 🛑 Validación básica
     if fecha_hora_fin <= turno.fecha_hora_inicio:
         raise HTTPException(
             status_code=400,
             detail="La fecha_hora_fin debe ser mayor que la fecha_hora_inicio"
         )
 
-    # 🔥 Validación de solapamiento (ANTES de DB)
     if hay_superposicion(
         db,
         turno.id_empleado,
@@ -91,7 +88,7 @@ def crear_turno(db: Session, turno: TurnoCrear):
     except IntegrityError as e:
         db.rollback()
 
-        # 🔥 Defensa extra (por si falla la validación previa)
+
         if "ex_turno_no_solapa_por_empleado" in str(e.orig):
             raise HTTPException(
                 status_code=409,
@@ -122,14 +119,14 @@ def actualizar_turno(db: Session, turno_id: int, datos: TurnoActualizar):
         else turno_db.fecha_hora_fin
     )
 
-    # 🛑 Validación básica
+
     if nueva_fecha_fin is not None and nueva_fecha_fin <= nueva_fecha_inicio:
         raise HTTPException(
             status_code=400,
             detail="La fecha_hora_fin debe ser mayor que la fecha_hora_inicio"
         )
 
-    # 🔥 Validación de solapamiento en update
+
     if hay_superposicion(
         db,
         datos.id_empleado if datos.id_empleado else turno_db.id_empleado,
@@ -142,7 +139,6 @@ def actualizar_turno(db: Session, turno_id: int, datos: TurnoActualizar):
             detail="El empleado ya tiene un turno en ese horario"
         )
 
-    # 🔄 Actualización de campos
     if datos.id_negocio is not None:
         turno_db.id_negocio = datos.id_negocio
     if datos.id_cliente is not None:
