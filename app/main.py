@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.routers import usuario, turno_router, empleado_router
+from app.routers import usuario, turno_router, empleado_router, negocio_router
 from app.db.base import engine, text
 
 
@@ -23,3 +23,4 @@ def test_db():
 app.include_router(usuario.router, prefix="/api")
 app.include_router(turno_router.router, prefix="/api")
 app.include_router(empleado_router.router, prefix="/api")
+app.include_router(negocio_router.router, prefix="/api")
