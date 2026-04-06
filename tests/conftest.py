@@ -7,7 +7,7 @@ from app.main import app
 from app.db.base import Base
 from app.db.session import get_db
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
+SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
@@ -31,8 +31,11 @@ def setup_db():
     from app.models.provincia import Provincia
     from app.models.localidad import Localidad
 
+    Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
+    
     yield
+    
     Base.metadata.drop_all(bind=engine)
 
 
@@ -61,3 +64,17 @@ def client(db):
         yield test_client
 
     app.dependency_overrides.clear()
+
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL,
+    connect_args={"check_same_thread": False}
+)
+
+# 🔥 AGREGÁ ESTO
+from sqlalchemy import event
+
+@event.listens_for(engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
