@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class EmpleadoBase(BaseModel):
@@ -18,7 +18,4 @@ class EmpleadoCreate(EmpleadoBase):
 class EmpleadoResponse(EmpleadoBase):
     id_empleado: int
     created_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
-
+    model_config = ConfigDict(from_attributes=True)
