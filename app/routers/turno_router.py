@@ -1,8 +1,7 @@
 from typing import List
-
+from app.db.session import get_db
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-
 from app.db.base import SessionLocal
 from app.schemas.appointment_schema import (
     TurnoCrear,
@@ -18,14 +17,6 @@ from app.services.turno_service import (
 )
 
 router = APIRouter(prefix="/turnos", tags=["Turnos"])
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 @router.get("/", response_model=List[TurnoResponse])

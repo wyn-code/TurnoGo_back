@@ -1,23 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-
-from app.db.base import SessionLocal
+from app.db.session import get_db
 from app.models.servicio import Servicio
 
 router = APIRouter(prefix="/servicios", tags=["Servicios"])
 
-
-# 🔌 DB
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
 # 📄 LISTAR
+
+
 @router.get("/")
 def listar_servicios(db: Session = Depends(get_db)):
     return db.query(Servicio).all()
