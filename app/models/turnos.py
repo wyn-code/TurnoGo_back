@@ -1,4 +1,4 @@
-from sqlalchemy import Column, DateTime, ForeignKey, Text, SmallInteger, BigInteger
+from sqlalchemy import Column, DateTime, ForeignKey, Text, SmallInteger, BigInteger, Integer
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.db.base import Base
@@ -7,7 +7,7 @@ from app.db.base import Base
 class Turno(Base):
     __tablename__ = "turno"
 
-    id_turno = Column(BigInteger, primary_key=True, index=True)
+    id_turno = Column(Integer, primary_key=True, index=True, autoincrement=True)
     id_negocio = Column(BigInteger, ForeignKey("negocios.id_negocio"), nullable=False)
     id_cliente = Column(BigInteger, ForeignKey("clientes.id_cliente"), nullable=False)
     id_servicio = Column(BigInteger, ForeignKey("servicio.id_servicio"), nullable=False)

@@ -1,8 +1,7 @@
 from typing import List
-from app.db.session import get_db
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.db.base import SessionLocal
+from app.db.session import get_db
 from app.schemas.appointment_schema import (
     TurnoCrear,
     TurnoActualizar,
@@ -32,22 +31,17 @@ def obtener(turno_id: int, db: Session = Depends(get_db)):
     return turno
 
 
-@router.post("/", response_model=TurnoResponse)
+@router.post("/", response_model=TurnoResponse, status_code=201)
 def crear(turno: TurnoCrear, db: Session = Depends(get_db)):
     return crear_turno(db, turno)
 
 
 @router.put("/{turno_id}", response_model=TurnoResponse)
 def actualizar(turno_id: int, datos: TurnoActualizar, db: Session = Depends(get_db)):
-    turno = actualizar_turno(db, turno_id, datos)
-    if not turno:
-        raise HTTPException(status_code=404, detail="Turno no encontrado")
-    return turno
+    return actualizar_turno(db, turno_id, datos)
 
 
 @router.delete("/{turno_id}")
 def borrar(turno_id: int, db: Session = Depends(get_db)):
-    turno = borrar_turno(db, turno_id)
-    if not turno:
-        raise HTTPException(status_code=404, detail="Turno no encontrado")
+    borrar_turno(db, turno_id)
     return {"mensaje": "Turno eliminado"}

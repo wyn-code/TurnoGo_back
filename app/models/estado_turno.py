@@ -1,9 +1,9 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime
-from datetime import datetime
+from sqlalchemy import Column, SmallInteger, String
 from app.db.base import Base
 
 
 class EstadoTurno(Base):
-    __tablaname__ = "estado_turno"
-    id_estado = Column(Integer, primary_key=True, index=True)
-    nombre_estado = Column(String(30), nullable=False)
+    __tablename__ = "estado_turno"  
+
+    id_estado = Column(SmallInteger, primary_key=True, index=True)
+    nombre_estado = Column(String(100), nullable=False)
