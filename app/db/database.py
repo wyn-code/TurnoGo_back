@@ -21,4 +21,4 @@ try:
         connection.execute(text("SELECT 1"))
         print("Conexión a PostgreSQL exitosa")
 except OperationalError as e:
-    print("Error de conexión:", e)
+    print("error de conexión:", e)
