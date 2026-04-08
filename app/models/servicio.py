@@ -10,8 +10,8 @@ class Servicio(Base):
     nombre_servicio = Column(String(30), nullable=False)
     precio = Column(Float, nullable=False)
     requiere_aprobacion = Column(Boolean, index=True)
-    duracion_min = Column(Integer)
-    duracion_max = Column(Integer)
+    duracion_min = Column(Integer, nullable=False)
+    duracion_max = Column(Integer, nullable=False)
     activo = Column(Boolean, nullable=False)
 
     turnos = relationship("Turno", back_populates="servicio")

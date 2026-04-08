@@ -1,7 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+
 from app.db.database import SessionLocal
+
+from app.db.session import get_db
+
 from app.schemas.negocio_schema import (
     NegocioCreate,
     NegocioResponse,
@@ -10,14 +14,6 @@ from app.services import negocio_service
 
 
 router = APIRouter(prefix="/negocios", tags=["Negocios"])
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 @router.post("/", response_model=NegocioResponse)

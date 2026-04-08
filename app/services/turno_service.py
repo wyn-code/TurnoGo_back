@@ -1,12 +1,12 @@
-from datetime import timedelta
+from datetime import datetime, timedelta, UTC
 
 from fastapi import HTTPException
-from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
-from app.models.turnos import Turno
-from app.schemas.appointment_schema import TurnoCrear, TurnoActualizar
 from app.models.servicio import Servicio
+from app.models.turnos import Turno
+from app.schemas.appointment_schema import TurnoActualizar, TurnoCrear
 
 
 def listar_turnos(db: Session):
@@ -17,24 +17,50 @@ def obtener_turno_por_id(db: Session, turno_id: int):
     return db.query(Turno).filter(Turno.id_turno == turno_id).first()
 
 
+def obtener_servicio_o_404(db: Session, id_servicio: int):
+    servicio = db.query(Servicio).filter(
+        Servicio.id_servicio == id_servicio
+    ).first()
 
-def hay_superposicion(db: Session, id_empleado: int, inicio, fin, excluir_turno_id=None):
+    if not servicio:
+        raise HTTPException(status_code=404, detail="El servicio no existe")
+
+    return servicio
+
+
+def validar_rango_horario(inicio, fin):
+    if fin is not None and fin <= inicio:
+        raise HTTPException(
+            status_code=400,
+            detail="La fecha_hora_fin debe ser mayor que la fecha_hora_inicio"
+        )
+
+
+def hay_superposicion(
+    db: Session,
+    id_empleado: int,
+    inicio,
+    fin,
+    excluir_turno_id=None
+):
+
     query = db.query(Turno).filter(
         Turno.id_empleado == id_empleado,
         Turno.fecha_hora_inicio < fin,
         Turno.fecha_hora_fin > inicio
     )
 
-    if excluir_turno_id:
+
+    if excluir_turno_id is not None:
+
         query = query.filter(Turno.id_turno != excluir_turno_id)
 
     return query.first() is not None
 
 
 def crear_turno(db: Session, turno: TurnoCrear):
-    servicio = db.query(Servicio).filter(
-        Servicio.id_servicio == turno.id_servicio
-    ).first()
+    servicio = obtener_servicio_o_404(db, turno.id_servicio)
+
 
     if not servicio:
         raise HTTPException(
@@ -43,17 +69,22 @@ def crear_turno(db: Session, turno: TurnoCrear):
         )
 
 
+
     fecha_hora_fin = turno.fecha_hora_fin
     if fecha_hora_fin is None:
         fecha_hora_fin = turno.fecha_hora_inicio + timedelta(
             minutes=servicio.duracion_min
         )
 
+
     if fecha_hora_fin <= turno.fecha_hora_inicio:
         raise HTTPException(
             status_code=400,
             detail="La fecha_hora_fin debe ser mayor que la fecha_hora_inicio"
         )
+
+    validar_rango_horario(turno.fecha_hora_inicio, fecha_hora_fin)
+
 
     if hay_superposicion(
         db,
@@ -66,6 +97,8 @@ def crear_turno(db: Session, turno: TurnoCrear):
             detail="El empleado ya tiene un turno en ese horario"
         )
 
+    ahora = datetime.now(UTC)
+
     nuevo_turno = Turno(
         id_negocio=turno.id_negocio,
         id_cliente=turno.id_cliente,
@@ -76,7 +109,9 @@ def crear_turno(db: Session, turno: TurnoCrear):
         fecha_hora_fin=fecha_hora_fin,
         id_admin_aprobador=None,
         aprobado_at=None,
-        rechazado_motivo=None
+        rechazado_motivo=None,
+        created_at=ahora,
+        updated_at=ahora,
     )
 
     try:
@@ -88,8 +123,8 @@ def crear_turno(db: Session, turno: TurnoCrear):
     except IntegrityError as e:
         db.rollback()
 
+        if "ex_turno_no_solapa_por_empleado" in error_text:
 
-        if "ex_turno_no_solapa_por_empleado" in str(e.orig):
             raise HTTPException(
                 status_code=409,
                 detail="El empleado ya tiene un turno en ese horario"
@@ -97,8 +132,8 @@ def crear_turno(db: Session, turno: TurnoCrear):
 
         raise HTTPException(
             status_code=400,
-            detail="Error de integridad en la base de datos"
-        )
+            detail=f"Error de integridad en la base de datos: {error_text}"
+        ) from e
 
 
 def actualizar_turno(db: Session, turno_id: int, datos: TurnoActualizar):
@@ -107,17 +142,29 @@ def actualizar_turno(db: Session, turno_id: int, datos: TurnoActualizar):
     if not turno_db:
         raise HTTPException(status_code=404, detail="Turno no encontrado")
 
+    nuevo_id_servicio = (
+        datos.id_servicio if datos.id_servicio is not None else turno_db.id_servicio
+    )
+    nuevo_id_empleado = (
+        datos.id_empleado if datos.id_empleado is not None else turno_db.id_empleado
+    )
     nueva_fecha_inicio = (
         datos.fecha_hora_inicio
         if datos.fecha_hora_inicio is not None
         else turno_db.fecha_hora_inicio
     )
 
-    nueva_fecha_fin = (
-        datos.fecha_hora_fin
-        if datos.fecha_hora_fin is not None
-        else turno_db.fecha_hora_fin
-    )
+    if datos.fecha_hora_fin is not None:
+        nueva_fecha_fin = datos.fecha_hora_fin
+    else:
+        if datos.id_servicio is not None or datos.fecha_hora_inicio is not None:
+            servicio = obtener_servicio_o_404(db, nuevo_id_servicio)
+            nueva_fecha_fin = nueva_fecha_inicio + timedelta(
+                minutes=servicio.duracion_min
+            )
+        else:
+            nueva_fecha_fin = turno_db.fecha_hora_fin
+
 
 
     if nueva_fecha_fin is not None and nueva_fecha_fin <= nueva_fecha_inicio:
@@ -126,10 +173,12 @@ def actualizar_turno(db: Session, turno_id: int, datos: TurnoActualizar):
             detail="La fecha_hora_fin debe ser mayor que la fecha_hora_inicio"
         )
 
+    validar_rango_horario(nueva_fecha_inicio, nueva_fecha_fin)
+
 
     if hay_superposicion(
         db,
-        datos.id_empleado if datos.id_empleado else turno_db.id_empleado,
+        nuevo_id_empleado,
         nueva_fecha_inicio,
         nueva_fecha_fin,
         excluir_turno_id=turno_id
@@ -138,6 +187,7 @@ def actualizar_turno(db: Session, turno_id: int, datos: TurnoActualizar):
             status_code=409,
             detail="El empleado ya tiene un turno en ese horario"
         )
+
 
     if datos.id_negocio is not None:
         turno_db.id_negocio = datos.id_negocio
@@ -153,12 +203,24 @@ def actualizar_turno(db: Session, turno_id: int, datos: TurnoActualizar):
         turno_db.fecha_hora_inicio = datos.fecha_hora_inicio
     if datos.fecha_hora_fin is not None:
         turno_db.fecha_hora_fin = datos.fecha_hora_fin
+
+    turno_db.id_negocio = datos.id_negocio if datos.id_negocio is not None else turno_db.id_negocio
+    turno_db.id_cliente = datos.id_cliente if datos.id_cliente is not None else turno_db.id_cliente
+    turno_db.id_servicio = nuevo_id_servicio
+    turno_db.id_estado = datos.id_estado if datos.id_estado is not None else turno_db.id_estado
+    turno_db.id_empleado = nuevo_id_empleado
+    turno_db.fecha_hora_inicio = nueva_fecha_inicio
+    turno_db.fecha_hora_fin = nueva_fecha_fin
+
+
     if datos.id_admin_aprobador is not None:
         turno_db.id_admin_aprobador = datos.id_admin_aprobador
     if datos.aprobado_at is not None:
         turno_db.aprobado_at = datos.aprobado_at
     if datos.rechazado_motivo is not None:
         turno_db.rechazado_motivo = datos.rechazado_motivo
+
+    turno_db.updated_at = datetime.now(UTC)
 
     try:
         db.commit()
@@ -168,7 +230,9 @@ def actualizar_turno(db: Session, turno_id: int, datos: TurnoActualizar):
     except IntegrityError as e:
         db.rollback()
 
-        if "ex_turno_no_solapa_por_empleado" in str(e.orig):
+        error_text = str(e.orig)
+
+        if "ex_turno_no_solapa_por_empleado" in error_text:
             raise HTTPException(
                 status_code=409,
                 detail="El empleado ya tiene un turno en ese horario"
@@ -176,8 +240,8 @@ def actualizar_turno(db: Session, turno_id: int, datos: TurnoActualizar):
 
         raise HTTPException(
             status_code=400,
-            detail="Error de integridad en la base de datos"
-        )
+            detail=f"Error de integridad en la base de datos: {error_text}"
+        ) from e
 
 
 def borrar_turno(db: Session, turno_id: int):
@@ -191,9 +255,9 @@ def borrar_turno(db: Session, turno_id: int):
         db.commit()
         return turno_db
 
-    except Exception:
+    except Exception as e:
         db.rollback()
         raise HTTPException(
             status_code=500,
-            detail="Error al eliminar el turno"
+            detail=f"Error al eliminar el turno: {str(e)}"
         )

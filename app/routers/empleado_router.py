@@ -1,9 +1,12 @@
 from typing import List
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+
 from app.db.database import SessionLocal
+
+from app.db.session import get_db
+
 from app.schemas.empleado_schema import EmpleadoCreate, EmpleadoResponse
 from app.services.empleado_service import (
     crear_empleado,
@@ -12,14 +15,6 @@ from app.services.empleado_service import (
 )
 
 router = APIRouter(prefix="/empleados", tags=["Empleados"])
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 @router.get("/", response_model=List[EmpleadoResponse])
@@ -38,4 +33,3 @@ def obtener(empleado_id: int, db: Session = Depends(get_db)):
 @router.post("/", response_model=EmpleadoResponse)
 def crear(empleado: EmpleadoCreate, db: Session = Depends(get_db)):
     return crear_empleado(db, empleado)
-

@@ -1,20 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, model_validator
-
-
-class TurnoBase(BaseModel):
-    id_negocio: int
-    id_cliente: int
-    id_servicio: int
-    id_estado: int
-    id_empleado: Optional[int] = None
-    fecha_hora_inicio: datetime
-    fecha_hora_fin: Optional[datetime] = None
-    id_admin_aprobador: Optional[int] = None
-    aprobado_at: Optional[datetime] = None
-    rechazado_motivo: Optional[str] = None
+from pydantic import BaseModel, model_validator, ConfigDict
 
 
 class TurnoCrear(BaseModel):
@@ -22,7 +9,7 @@ class TurnoCrear(BaseModel):
     id_cliente: int
     id_servicio: int
     id_estado: int
-    id_empleado: Optional[int] = None
+    id_empleado: int
     fecha_hora_inicio: datetime
     fecha_hora_fin: Optional[datetime] = None
 
@@ -69,7 +56,7 @@ class TurnoResponse(BaseModel):
     id_cliente: int
     id_servicio: int
     id_estado: int
-    id_empleado: Optional[int] = None
+    id_empleado: int
     fecha_hora_inicio: datetime
     fecha_hora_fin: Optional[datetime] = None
     id_admin_aprobador: Optional[int] = None
@@ -77,6 +64,4 @@ class TurnoResponse(BaseModel):
     rechazado_motivo: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

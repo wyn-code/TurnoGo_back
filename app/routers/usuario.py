@@ -2,7 +2,11 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+
 from app.db.database import SessionLocal
+
+from app.db.session import get_db
+
 from app.schemas.usuario_schema import UsuarioCreate, UsuarioUpdate, UsuarioResponse
 from app.services.usuario_service import (
     crear_usuario,
@@ -13,14 +17,6 @@ from app.services.usuario_service import (
 )
 
 router = APIRouter(prefix="/usuarios", tags=["Usuarios"])
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 @router.get("/", response_model=List[UsuarioResponse])
