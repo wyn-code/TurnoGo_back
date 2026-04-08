@@ -43,13 +43,16 @@ def hay_superposicion(
     fin,
     excluir_turno_id=None
 ):
+
     query = db.query(Turno).filter(
         Turno.id_empleado == id_empleado,
         Turno.fecha_hora_inicio < fin,
         Turno.fecha_hora_fin > inicio
     )
 
+
     if excluir_turno_id is not None:
+
         query = query.filter(Turno.id_turno != excluir_turno_id)
 
     return query.first() is not None
@@ -58,13 +61,30 @@ def hay_superposicion(
 def crear_turno(db: Session, turno: TurnoCrear):
     servicio = obtener_servicio_o_404(db, turno.id_servicio)
 
+
+    if not servicio:
+        raise HTTPException(
+            status_code=404,
+            detail="El servicio no existe"
+        )
+
+
+
     fecha_hora_fin = turno.fecha_hora_fin
     if fecha_hora_fin is None:
         fecha_hora_fin = turno.fecha_hora_inicio + timedelta(
             minutes=servicio.duracion_min
         )
 
+
+    if fecha_hora_fin <= turno.fecha_hora_inicio:
+        raise HTTPException(
+            status_code=400,
+            detail="La fecha_hora_fin debe ser mayor que la fecha_hora_inicio"
+        )
+
     validar_rango_horario(turno.fecha_hora_inicio, fecha_hora_fin)
+
 
     if hay_superposicion(
         db,
@@ -103,9 +123,8 @@ def crear_turno(db: Session, turno: TurnoCrear):
     except IntegrityError as e:
         db.rollback()
 
-        error_text = str(e.orig)
-
         if "ex_turno_no_solapa_por_empleado" in error_text:
+
             raise HTTPException(
                 status_code=409,
                 detail="El empleado ya tiene un turno en ese horario"
@@ -146,7 +165,16 @@ def actualizar_turno(db: Session, turno_id: int, datos: TurnoActualizar):
         else:
             nueva_fecha_fin = turno_db.fecha_hora_fin
 
+
+
+    if nueva_fecha_fin is not None and nueva_fecha_fin <= nueva_fecha_inicio:
+        raise HTTPException(
+            status_code=400,
+            detail="La fecha_hora_fin debe ser mayor que la fecha_hora_inicio"
+        )
+
     validar_rango_horario(nueva_fecha_inicio, nueva_fecha_fin)
+
 
     if hay_superposicion(
         db,
@@ -160,6 +188,22 @@ def actualizar_turno(db: Session, turno_id: int, datos: TurnoActualizar):
             detail="El empleado ya tiene un turno en ese horario"
         )
 
+
+    if datos.id_negocio is not None:
+        turno_db.id_negocio = datos.id_negocio
+    if datos.id_cliente is not None:
+        turno_db.id_cliente = datos.id_cliente
+    if datos.id_servicio is not None:
+        turno_db.id_servicio = datos.id_servicio
+    if datos.id_estado is not None:
+        turno_db.id_estado = datos.id_estado
+    if datos.id_empleado is not None:
+        turno_db.id_empleado = datos.id_empleado
+    if datos.fecha_hora_inicio is not None:
+        turno_db.fecha_hora_inicio = datos.fecha_hora_inicio
+    if datos.fecha_hora_fin is not None:
+        turno_db.fecha_hora_fin = datos.fecha_hora_fin
+
     turno_db.id_negocio = datos.id_negocio if datos.id_negocio is not None else turno_db.id_negocio
     turno_db.id_cliente = datos.id_cliente if datos.id_cliente is not None else turno_db.id_cliente
     turno_db.id_servicio = nuevo_id_servicio
@@ -167,6 +211,7 @@ def actualizar_turno(db: Session, turno_id: int, datos: TurnoActualizar):
     turno_db.id_empleado = nuevo_id_empleado
     turno_db.fecha_hora_inicio = nueva_fecha_inicio
     turno_db.fecha_hora_fin = nueva_fecha_fin
+
 
     if datos.id_admin_aprobador is not None:
         turno_db.id_admin_aprobador = datos.id_admin_aprobador

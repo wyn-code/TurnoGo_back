@@ -1,7 +1,12 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+
+
+from app.db.database import SessionLocal
+
 from app.db.session import get_db
+
 from app.schemas.empleado_schema import EmpleadoCreate, EmpleadoResponse
 from app.services.empleado_service import (
     crear_empleado,
