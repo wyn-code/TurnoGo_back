@@ -1,3 +1,4 @@
+from .categoria import Categoria
 from .cliente import Cliente
 from .turnos import Turno
 from .servicio import Servicio

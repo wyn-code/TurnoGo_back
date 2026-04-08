@@ -1,23 +1,3 @@
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker, declarative_base
-from sqlalchemy.exc import OperationalError
-from decouple import config
-
-DATABASE_URL = config('DB')
-
-engine = create_engine(DATABASE_URL)
-
-SessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine
-)
+from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
-
-try:
-    with engine.connect() as connection:
-        result = connection.execute(text("SELECT 1"))
-        print("Conexión a PostgreSQL exitosa")
-except OperationalError as e:
-    print("Error de conexión:", e)

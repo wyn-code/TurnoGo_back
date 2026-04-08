@@ -3,7 +3,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.db.base import SessionLocal
+from app.db.database import SessionLocal
 from app.schemas.appointment_schema import (
     TurnoCrear,
     TurnoActualizar,
