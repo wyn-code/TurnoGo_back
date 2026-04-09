@@ -1,15 +1,16 @@
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+
 from app.models.negocio import Negocio
 from app.schemas.negocio_schema import NegocioCreate
 
 
+def _query_por_slug(db: Session, slug: str):
+    return db.query(Negocio).filter(Negocio.slug == slug)
+
+
 def crear_negocio(db: Session, negocio_data: NegocioCreate):
-    negocio_existente = (
-        db.query(Negocio)
-        .filter(Negocio.slug == negocio_data.slug)
-        .first()
-    )
+    negocio_existente = _query_por_slug(db, negocio_data.slug).first()
 
     if negocio_existente:
         raise ValueError("Ya existe un negocio con ese slug")
@@ -42,8 +43,4 @@ def obtener_negocio_por_id(db: Session, id_negocio: int):
 
 
 def obtener_negocio_por_slug(db: Session, slug: str):
-    return (
-        db.query(Negocio)
-        .filter(Negocio.slug == slug)
-        .first()
-    )
+    return _query_por_slug(db, slug).first()

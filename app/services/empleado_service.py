@@ -4,12 +4,16 @@ from app.models.empleado import Empleado
 from app.schemas.empleado_schema import EmpleadoCreate
 
 
+def _query_empleado_por_id(db: Session, empleado_id: int):
+    return db.query(Empleado).filter(Empleado.id_empleado == empleado_id)
+
+
 def ver_empleados(db: Session):
     return db.query(Empleado).all()
 
 
 def ver_empleado_por_id(db: Session, empleado_id: int):
-    return db.query(Empleado).filter(Empleado.id_empleado == empleado_id).first()
+    return _query_empleado_por_id(db, empleado_id).first()
 
 
 def crear_empleado(db: Session, empleado: EmpleadoCreate):

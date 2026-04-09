@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+
 from app.models.usuario import Usuario
 from app.schemas.usuario_schema import UsuarioCreate, UsuarioUpdate
 
@@ -29,14 +30,8 @@ def actualizar_usuario(db: Session, usuario_id: int, datos: UsuarioUpdate):
     if not usuario_db:
         return None
 
-    if datos.usuario_us is not None:
-        usuario_db.usuario_us = datos.usuario_us
-
-    if datos.email_us is not None:
-        usuario_db.email_us = datos.email_us
-
-    if datos.contrasena_us is not None:
-        usuario_db.contrasena_us = datos.contrasena_us
+    for campo, valor in datos.model_dump(exclude_unset=True).items():
+        setattr(usuario_db, campo, valor)
 
     db.commit()
     db.refresh(usuario_db)

@@ -1,6 +1,6 @@
-from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+
 from app.db.session import get_db
 from app.schemas.appointment_schema import (
     TurnoCrear,
@@ -18,7 +18,7 @@ from app.services.turno_service import (
 router = APIRouter(prefix="/turnos", tags=["Turnos"])
 
 
-@router.get("/", response_model=List[TurnoResponse])
+@router.get("/", response_model=list[TurnoResponse])
 def listar(db: Session = Depends(get_db)):
     return listar_turnos(db)
 

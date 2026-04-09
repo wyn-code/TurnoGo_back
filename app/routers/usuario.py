@@ -1,6 +1,6 @@
-from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+
 from app.db.session import get_db
 from app.schemas.usuario_schema import UsuarioCreate, UsuarioUpdate, UsuarioResponse
 from app.services.usuario_service import (
@@ -14,7 +14,7 @@ from app.services.usuario_service import (
 router = APIRouter(prefix="/usuarios", tags=["Usuarios"])
 
 
-@router.get("/", response_model=List[UsuarioResponse])
+@router.get("/", response_model=list[UsuarioResponse])
 def get(db: Session = Depends(get_db)):
     return ver_usuarios(db)
 

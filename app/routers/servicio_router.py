@@ -1,49 +1,27 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from typing import List
+
 from app.db.session import get_db
-from app.models.servicio import Servicio
+from app.schemas.servicio_schema import ServicioCreate, ServicioResponse
+from app.services.servicio_service import (
+    crear_servicio as crear_servicio_service,
+    eliminar_servicio as eliminar_servicio_service,
+    listar_servicios as listar_servicios_service,
+)
 
 router = APIRouter(prefix="/servicios", tags=["Servicios"])
 
-# 📄 LISTAR
-
-
-@router.get("/")
+@router.get("/", response_model=list[ServicioResponse])
 def listar_servicios(db: Session = Depends(get_db)):
-    return db.query(Servicio).all()
+    return listar_servicios_service(db)
 
 
-# ➕ CREAR
-@router.post("/")
-def crear_servicio(data: dict, db: Session = Depends(get_db)):
-    nuevo = Servicio(
-        nombre_servicio=data["nombre_servicio"],
-        precio=data["precio"],
-        requiere_aprobacion=data.get("requiere_aprobacion", False),
-        duracion_min=data.get("duracion_min"),
-        duracion_max=data.get("duracion_max"),
-        activo=data.get("activo", True)
-    )
-
-    db.add(nuevo)
-    db.commit()
-    db.refresh(nuevo)
-
-    return nuevo
+@router.post("/", response_model=ServicioResponse)
+def crear_servicio(data: ServicioCreate, db: Session = Depends(get_db)):
+    return crear_servicio_service(db, data)
 
 
-# ❌ ELIMINAR
 @router.delete("/{id_servicio}")
 def eliminar_servicio(id_servicio: int, db: Session = Depends(get_db)):
-    servicio = db.query(Servicio).filter(
-        Servicio.id_servicio == id_servicio
-    ).first()
-
-    if not servicio:
-        raise HTTPException(status_code=404, detail="Servicio no encontrado")
-
-    db.delete(servicio)
-    db.commit()
-
+    eliminar_servicio_service(db, id_servicio)
     return {"mensaje": "Servicio eliminado"}

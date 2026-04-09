@@ -9,6 +9,9 @@ from app.models.turnos import Turno
 from app.schemas.appointment_schema import TurnoActualizar, TurnoCrear
 
 
+SOLAPAMIENTO_DETALLE = "El empleado ya tiene un turno en ese horario"
+
+
 def listar_turnos(db: Session):
     return db.query(Turno).all()
 
@@ -28,7 +31,7 @@ def obtener_servicio_o_404(db: Session, id_servicio: int):
     return servicio
 
 
-def validar_rango_horario(inicio, fin):
+def validar_rango_horario(inicio: datetime, fin: datetime | None):
     if fin is not None and fin <= inicio:
         raise HTTPException(
             status_code=400,
@@ -39,10 +42,13 @@ def validar_rango_horario(inicio, fin):
 def hay_superposicion(
     db: Session,
     id_empleado: int,
-    inicio,
-    fin,
-    excluir_turno_id=None
+    inicio: datetime,
+    fin: datetime | None,
+    excluir_turno_id: int | None = None,
 ):
+    if fin is None:
+        return False
+
     query = db.query(Turno).filter(
         Turno.id_empleado == id_empleado,
         Turno.fecha_hora_inicio < fin,
@@ -55,14 +61,37 @@ def hay_superposicion(
     return query.first() is not None
 
 
-def crear_turno(db: Session, turno: TurnoCrear):
-    servicio = obtener_servicio_o_404(db, turno.id_servicio)
+def _resolver_fecha_hora_fin(
+    db: Session,
+    id_servicio: int,
+    fecha_hora_inicio: datetime,
+    fecha_hora_fin: datetime | None,
+) -> datetime:
+    if fecha_hora_fin is not None:
+        return fecha_hora_fin
 
-    fecha_hora_fin = turno.fecha_hora_fin
-    if fecha_hora_fin is None:
-        fecha_hora_fin = turno.fecha_hora_inicio + timedelta(
-            minutes=servicio.duracion_min
-        )
+    servicio = obtener_servicio_o_404(db, id_servicio)
+    return fecha_hora_inicio + timedelta(minutes=servicio.duracion_min)
+
+
+def _lanzar_error_integridad(e: IntegrityError) -> None:
+    error_text = str(e.orig)
+    if "ex_turno_no_solapa_por_empleado" in error_text:
+        raise HTTPException(status_code=409, detail=SOLAPAMIENTO_DETALLE) from e
+
+    raise HTTPException(
+        status_code=400,
+        detail=f"Error de integridad en la base de datos: {error_text}"
+    ) from e
+
+
+def crear_turno(db: Session, turno: TurnoCrear):
+    fecha_hora_fin = _resolver_fecha_hora_fin(
+        db=db,
+        id_servicio=turno.id_servicio,
+        fecha_hora_inicio=turno.fecha_hora_inicio,
+        fecha_hora_fin=turno.fecha_hora_fin,
+    )
 
     validar_rango_horario(turno.fecha_hora_inicio, fecha_hora_fin)
 
@@ -74,7 +103,7 @@ def crear_turno(db: Session, turno: TurnoCrear):
     ):
         raise HTTPException(
             status_code=409,
-            detail="El empleado ya tiene un turno en ese horario"
+            detail=SOLAPAMIENTO_DETALLE
         )
 
     ahora = datetime.now(UTC)
@@ -102,19 +131,7 @@ def crear_turno(db: Session, turno: TurnoCrear):
 
     except IntegrityError as e:
         db.rollback()
-
-        error_text = str(e.orig)
-
-        if "ex_turno_no_solapa_por_empleado" in error_text:
-            raise HTTPException(
-                status_code=409,
-                detail="El empleado ya tiene un turno en ese horario"
-            )
-
-        raise HTTPException(
-            status_code=400,
-            detail=f"Error de integridad en la base de datos: {error_text}"
-        ) from e
+        _lanzar_error_integridad(e)
 
 
 def actualizar_turno(db: Session, turno_id: int, datos: TurnoActualizar):
@@ -135,16 +152,17 @@ def actualizar_turno(db: Session, turno_id: int, datos: TurnoActualizar):
         else turno_db.fecha_hora_inicio
     )
 
-    if datos.fecha_hora_fin is not None:
-        nueva_fecha_fin = datos.fecha_hora_fin
-    else:
-        if datos.id_servicio is not None or datos.fecha_hora_inicio is not None:
-            servicio = obtener_servicio_o_404(db, nuevo_id_servicio)
-            nueva_fecha_fin = nueva_fecha_inicio + timedelta(
-                minutes=servicio.duracion_min
-            )
-        else:
-            nueva_fecha_fin = turno_db.fecha_hora_fin
+    recalcular_fin = datos.id_servicio is not None or datos.fecha_hora_inicio is not None
+    nueva_fecha_fin = (
+        _resolver_fecha_hora_fin(
+            db=db,
+            id_servicio=nuevo_id_servicio,
+            fecha_hora_inicio=nueva_fecha_inicio,
+            fecha_hora_fin=datos.fecha_hora_fin,
+        )
+        if recalcular_fin or datos.fecha_hora_fin is not None
+        else turno_db.fecha_hora_fin
+    )
 
     validar_rango_horario(nueva_fecha_inicio, nueva_fecha_fin)
 
@@ -157,13 +175,19 @@ def actualizar_turno(db: Session, turno_id: int, datos: TurnoActualizar):
     ):
         raise HTTPException(
             status_code=409,
-            detail="El empleado ya tiene un turno en ese horario"
+            detail=SOLAPAMIENTO_DETALLE
         )
 
-    turno_db.id_negocio = datos.id_negocio if datos.id_negocio is not None else turno_db.id_negocio
-    turno_db.id_cliente = datos.id_cliente if datos.id_cliente is not None else turno_db.id_cliente
+    turno_db.id_negocio = (
+        datos.id_negocio if datos.id_negocio is not None else turno_db.id_negocio
+    )
+    turno_db.id_cliente = (
+        datos.id_cliente if datos.id_cliente is not None else turno_db.id_cliente
+    )
     turno_db.id_servicio = nuevo_id_servicio
-    turno_db.id_estado = datos.id_estado if datos.id_estado is not None else turno_db.id_estado
+    turno_db.id_estado = (
+        datos.id_estado if datos.id_estado is not None else turno_db.id_estado
+    )
     turno_db.id_empleado = nuevo_id_empleado
     turno_db.fecha_hora_inicio = nueva_fecha_inicio
     turno_db.fecha_hora_fin = nueva_fecha_fin
@@ -184,19 +208,7 @@ def actualizar_turno(db: Session, turno_id: int, datos: TurnoActualizar):
 
     except IntegrityError as e:
         db.rollback()
-
-        error_text = str(e.orig)
-
-        if "ex_turno_no_solapa_por_empleado" in error_text:
-            raise HTTPException(
-                status_code=409,
-                detail="El empleado ya tiene un turno en ese horario"
-            )
-
-        raise HTTPException(
-            status_code=400,
-            detail=f"Error de integridad en la base de datos: {error_text}"
-        ) from e
+        _lanzar_error_integridad(e)
 
 
 def borrar_turno(db: Session, turno_id: int):

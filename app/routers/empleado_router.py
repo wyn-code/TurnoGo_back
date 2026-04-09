@@ -1,6 +1,6 @@
-from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+
 from app.db.session import get_db
 from app.schemas.empleado_schema import EmpleadoCreate, EmpleadoResponse
 from app.services.empleado_service import (
@@ -12,7 +12,7 @@ from app.services.empleado_service import (
 router = APIRouter(prefix="/empleados", tags=["Empleados"])
 
 
-@router.get("/", response_model=List[EmpleadoResponse])
+@router.get("/", response_model=list[EmpleadoResponse])
 def listar(db: Session = Depends(get_db)):
     return ver_empleados(db)
 

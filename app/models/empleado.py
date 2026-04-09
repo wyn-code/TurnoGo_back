@@ -1,7 +1,7 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime
-from datetime import datetime
-from app.db.base import Base
 from sqlalchemy.orm import relationship
+from sqlalchemy import Boolean, Column, Integer, String
+
+from app.db.base import Base
 
 
 class Empleado(Base):
