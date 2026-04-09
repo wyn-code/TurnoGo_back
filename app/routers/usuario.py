@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+
 from app.schemas.usuario_schema import UsuarioCreate, UsuarioUpdate, UsuarioResponse
 from app.services.usuario_service import (
     crear_usuario,

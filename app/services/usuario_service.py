@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-
+from app.core.security import get_password_hash
 from app.models.usuario import Usuario
 from app.schemas.usuario_schema import UsuarioCreate, UsuarioUpdate
 
@@ -16,13 +16,12 @@ def crear_usuario(db: Session, usuario: UsuarioCreate):
     nuevo_usuario = Usuario(
         usuario_us=usuario.usuario_us,
         email_us=usuario.email_us,
-        contrasena_us=usuario.contrasena_us
+        contrasena_us=get_password_hash(usuario.contrasena_us),
     )
     db.add(nuevo_usuario)
     db.commit()
     db.refresh(nuevo_usuario)
     return nuevo_usuario
-
 
 def actualizar_usuario(db: Session, usuario_id: int, datos: UsuarioUpdate):
     usuario_db = db.query(Usuario).filter(Usuario.id_us == usuario_id).first()
@@ -30,8 +29,14 @@ def actualizar_usuario(db: Session, usuario_id: int, datos: UsuarioUpdate):
     if not usuario_db:
         return None
 
-    for campo, valor in datos.model_dump(exclude_unset=True).items():
-        setattr(usuario_db, campo, valor)
+    if datos.usuario_us is not None:
+        usuario_db.usuario_us = datos.usuario_us
+
+    if datos.email_us is not None:
+        usuario_db.email_us = datos.email_us
+
+    if datos.contrasena_us is not None:
+        usuario_db.contrasena_us = get_password_hash(datos.contrasena_us)
 
     db.commit()
     db.refresh(usuario_db)

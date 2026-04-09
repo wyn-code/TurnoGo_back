@@ -55,7 +55,9 @@ def hay_superposicion(
         Turno.fecha_hora_fin > inicio
     )
 
+
     if excluir_turno_id is not None:
+
         query = query.filter(Turno.id_turno != excluir_turno_id)
 
     return query.first() is not None
@@ -93,7 +95,15 @@ def crear_turno(db: Session, turno: TurnoCrear):
         fecha_hora_fin=turno.fecha_hora_fin,
     )
 
+
+    if fecha_hora_fin <= turno.fecha_hora_inicio:
+        raise HTTPException(
+            status_code=400,
+            detail="La fecha_hora_fin debe ser mayor que la fecha_hora_inicio"
+        )
+
     validar_rango_horario(turno.fecha_hora_inicio, fecha_hora_fin)
+
 
     if hay_superposicion(
         db,
@@ -164,7 +174,16 @@ def actualizar_turno(db: Session, turno_id: int, datos: TurnoActualizar):
         else turno_db.fecha_hora_fin
     )
 
+
+
+    if nueva_fecha_fin is not None and nueva_fecha_fin <= nueva_fecha_inicio:
+        raise HTTPException(
+            status_code=400,
+            detail="La fecha_hora_fin debe ser mayor que la fecha_hora_inicio"
+        )
+
     validar_rango_horario(nueva_fecha_inicio, nueva_fecha_fin)
+
 
     if hay_superposicion(
         db,
@@ -191,6 +210,7 @@ def actualizar_turno(db: Session, turno_id: int, datos: TurnoActualizar):
     turno_db.id_empleado = nuevo_id_empleado
     turno_db.fecha_hora_inicio = nueva_fecha_inicio
     turno_db.fecha_hora_fin = nueva_fecha_fin
+
 
     if datos.id_admin_aprobador is not None:
         turno_db.id_admin_aprobador = datos.id_admin_aprobador
