@@ -8,7 +8,7 @@ class Turno(Base):
     __tablename__ = "turno"
 
     id_turno = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    id_negocio = Column(BigInteger, ForeignKey("negocios.id_negocio"), nullable=False)
+    id_negocio = Column(BigInteger, ForeignKey("negocio.id_negocio"), nullable=False)
     id_cliente = Column(BigInteger, ForeignKey("clientes.id_cliente"), nullable=False)
     id_servicio = Column(BigInteger, ForeignKey("servicio.id_servicio"), nullable=False)
     id_estado = Column(SmallInteger, nullable=False)

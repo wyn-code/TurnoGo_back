@@ -11,6 +11,7 @@ from app.models.usuario import Usuario
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
+
 def get_db() -> Generator:
     db = SessionLocal()
     try:
@@ -41,4 +42,3 @@ def get_current_user(
         raise credentials_exception
 
     return usuario
-

@@ -1,5 +1,4 @@
 from datetime import datetime
-
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
@@ -7,7 +6,7 @@ from app.db.base import Base
 
 
 class Negocio(Base):
-    __tablename__ = "negocios"
+    __tablename__ = "negocio"
 
     id_negocio = Column(Integer, primary_key=True, index=True)
     nombre = Column(String(150), nullable=False)
@@ -19,7 +18,7 @@ class Negocio(Base):
 
     id_localidad = Column(
         Integer,
-        ForeignKey("localidades.id_localidad"),
+        ForeignKey("localidad.id_localidad"),
         nullable=True
     )
     id_provincia = Column(
@@ -35,3 +34,5 @@ class Negocio(Base):
     creado_at = Column(DateTime, default=datetime.now, nullable=False)
 
     turnos = relationship("Turno", back_populates="negocio")
+    servicios = relationship("Servicio", back_populates="negocio", cascade="all, delete-orphan")
+    empleados = relationship("Empleado", back_populates="negocio", cascade="all, delete-orphan")

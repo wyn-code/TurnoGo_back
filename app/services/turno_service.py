@@ -55,7 +55,6 @@ def hay_superposicion(
         Turno.fecha_hora_fin > inicio
     )
 
-
     if excluir_turno_id is not None:
 
         query = query.filter(Turno.id_turno != excluir_turno_id)
@@ -79,7 +78,8 @@ def _resolver_fecha_hora_fin(
 def _lanzar_error_integridad(e: IntegrityError) -> None:
     error_text = str(e.orig)
     if "ex_turno_no_solapa_por_empleado" in error_text:
-        raise HTTPException(status_code=409, detail=SOLAPAMIENTO_DETALLE) from e
+        raise HTTPException(
+            status_code=409, detail=SOLAPAMIENTO_DETALLE) from e
 
     raise HTTPException(
         status_code=400,
@@ -95,7 +95,6 @@ def crear_turno(db: Session, turno: TurnoCrear):
         fecha_hora_fin=turno.fecha_hora_fin,
     )
 
-
     if fecha_hora_fin <= turno.fecha_hora_inicio:
         raise HTTPException(
             status_code=400,
@@ -103,7 +102,6 @@ def crear_turno(db: Session, turno: TurnoCrear):
         )
 
     validar_rango_horario(turno.fecha_hora_inicio, fecha_hora_fin)
-
 
     if hay_superposicion(
         db,
@@ -174,8 +172,6 @@ def actualizar_turno(db: Session, turno_id: int, datos: TurnoActualizar):
         else turno_db.fecha_hora_fin
     )
 
-
-
     if nueva_fecha_fin is not None and nueva_fecha_fin <= nueva_fecha_inicio:
         raise HTTPException(
             status_code=400,
@@ -183,7 +179,6 @@ def actualizar_turno(db: Session, turno_id: int, datos: TurnoActualizar):
         )
 
     validar_rango_horario(nueva_fecha_inicio, nueva_fecha_fin)
-
 
     if hay_superposicion(
         db,
@@ -210,7 +205,6 @@ def actualizar_turno(db: Session, turno_id: int, datos: TurnoActualizar):
     turno_db.id_empleado = nuevo_id_empleado
     turno_db.fecha_hora_inicio = nueva_fecha_inicio
     turno_db.fecha_hora_fin = nueva_fecha_fin
-
 
     if datos.id_admin_aprobador is not None:
         turno_db.id_admin_aprobador = datos.id_admin_aprobador

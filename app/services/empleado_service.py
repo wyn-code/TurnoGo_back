@@ -18,6 +18,7 @@ def ver_empleado_por_id(db: Session, empleado_id: int):
 
 def crear_empleado(db: Session, empleado: EmpleadoCreate):
     nuevo_empleado = Empleado(
+        id_negocio=empleado.id_negocio,
         nombre=empleado.nombre,
         apellido=empleado.apellido,
         telefono=empleado.telefono,

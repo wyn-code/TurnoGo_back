@@ -1,7 +1,12 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-DATABASE_URL = "postgresql://user:password@localhost/tu_db"
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+DATABASE_URL = os.getenv("DB")
 
 engine = create_engine(DATABASE_URL)
 
@@ -11,10 +16,10 @@ SessionLocal = sessionmaker(
     bind=engine
 )
 
-# session.py
 def get_db():
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
+

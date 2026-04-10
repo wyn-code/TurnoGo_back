@@ -3,7 +3,7 @@ from app.db.base import Base
 
 
 class Localidad(Base):
-    __tablename__ = "localidades"
+    __tablename__ = "localidad"
 
     id_localidad = Column(Integer, primary_key=True, index=True)
     nombre = Column(String(100), nullable=False)

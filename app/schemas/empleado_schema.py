@@ -10,12 +10,12 @@ class EmpleadoBase(BaseModel):
     telefono: str
     activo: bool
 
-
 class EmpleadoCreate(EmpleadoBase):
-    pass
+    id_negocio: int
 
 
 class EmpleadoResponse(EmpleadoBase):
     id_empleado: int
+    id_negocio: int
     created_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)

@@ -1,49 +1,38 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-
-from app.db.database import SessionLocal
-
 from app.db.session import get_db
-
 from app.schemas.negocio_schema import (
     NegocioCreate,
     NegocioResponse,
+    NegocioCompleteCreate,
+    NegocioCompleteResponse,
 )
-from app.services import negocio_service
-
+from app.services.negocio_service import (
+    listar_negocios,
+    obtener_negocio_por_id,
+    crear_negocio,
+    crear_negocio_completo,
+)
 
 router = APIRouter(prefix="/negocios", tags=["Negocios"])
 
 
-@router.post("/", response_model=NegocioResponse)
-def crear_negocio(negocio: NegocioCreate, db: Session = Depends(get_db)):
-    try:
-        return negocio_service.crear_negocio(db, negocio)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
 @router.get("/", response_model=list[NegocioResponse])
-def listar_negocios(db: Session = Depends(get_db)):
-    return negocio_service.obtener_negocios(db)
+def ver_negocios(db: Session = Depends(get_db)):
+    return listar_negocios(db)
 
 
-@router.get("/id/{id_negocio}", response_model=NegocioResponse)
-def traer_negocio_por_id(id_negocio: int, db: Session = Depends(get_db)):
-    negocio = negocio_service.obtener_negocio_por_id(db, id_negocio)
-
-    if not negocio:
-        raise HTTPException(status_code=404, detail="Negocio no encontrado")
-
-    return negocio
+@router.get("/{negocio_id}", response_model=NegocioResponse)
+def ver_negocio_por_id(negocio_id: int, db: Session = Depends(get_db)):
+    return obtener_negocio_por_id(db, negocio_id)
 
 
-@router.get("/slug/{slug}", response_model=NegocioResponse)
-def traer_negocio_por_slug(slug: str, db: Session = Depends(get_db)):
-    negocio = negocio_service.obtener_negocio_por_slug(db, slug)
+@router.post("/", response_model=NegocioResponse, status_code=201)
+def post_negocio(data: NegocioCreate, db: Session = Depends(get_db)):
+    return crear_negocio(db, data)
 
-    if not negocio:
-        raise HTTPException(status_code=404, detail="Negocio no encontrado")
 
-    return negocio
+@router.post("/complete", response_model=NegocioCompleteResponse, status_code=201)
+def post_negocio_completo(data: NegocioCompleteCreate, db: Session = Depends(get_db)):
+    return crear_negocio_completo(db, data)

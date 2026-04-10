@@ -13,9 +13,10 @@ class ServicioBase(BaseModel):
 
 
 class ServicioCreate(ServicioBase):
-    pass
+    id_negocio: int
 
 
 class ServicioResponse(ServicioBase):
     id_servicio: int
+    id_negocio: int
     model_config = ConfigDict(from_attributes=True)
