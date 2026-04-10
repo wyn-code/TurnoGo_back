@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_user, get_db
 from app.models.usuario import Usuario
+from app.models.negocio import Negocio
 from app.schemas.auth_schema import AuthResponse, LoginRequest, RegisterRequest
 from app.schemas.auth_schema import TokenResponse
 from app.schemas.usuario_schema import UsuarioResponse
@@ -27,7 +28,19 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     return token
 
 
-@router.get("/me", response_model=UsuarioResponse)
-def me(current_user: Usuario = Depends(get_current_user)):
-    return current_user
+@router.get("/me")
+def me(
+    current_user: Usuario = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    negocio = db.query(Negocio).filter(
+        Negocio.usuario_id == current_user.id_us
+    ).first()
+
+    return {
+        "id_us": current_user.id_us,
+        "email_us": current_user.email_us,
+        "usuario_us": current_user.usuario_us,
+        "has_business": negocio is not None
+    }
 
