@@ -1,3 +1,4 @@
+""" 
 @router.get("/admin/dashboard")
 def admin_dashboard(db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
     if current_user.role != "admin":
@@ -23,4 +24,5 @@ def admin_dashboard(db: Session = Depends(get_db), current_user: Usuario = Depen
             }
             for n in negocios
         ]
-    }
+    } 
+    """
