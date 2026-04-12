@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, DateTime
-from sqlalchemy.orm import relationship
 from datetime import datetime
+from sqlalchemy.orm import relationship
 from app.db.base import Base
 
 
@@ -11,7 +11,9 @@ class Usuario(Base):
     usuario_us = Column(String(30), nullable=False, unique=True)
     email_us = Column(String(50), nullable=False, unique=True)
     contrasena_us = Column(String(255), nullable=False)
+
+    role = Column(String(20), default="cliente")  # 👈 NUEVO
+
     created_at = Column(DateTime, default=datetime.now)
 
-    # 👇 AGREGAR ESTO
-    negocio = relationship("Negocio", back_populates="usuario", uselist=False)
+    negocio = relationship("Negocio", back_populates="usuario")
