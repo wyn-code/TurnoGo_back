@@ -41,6 +41,7 @@ def me(
         "id_us": current_user.id_us,
         "email_us": current_user.email_us,
         "usuario_us": current_user.usuario_us,
-        "has_business": negocio is not None
+        "has_business": negocio is not None,
+        "role": current_user.role
     }
 
