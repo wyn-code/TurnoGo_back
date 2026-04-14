@@ -13,24 +13,15 @@ def _validar_rango_horario(
         and fecha_hora_fin is not None
         and fecha_hora_fin <= fecha_hora_inicio
     ):
-        raise ValueError(
-            "fecha_hora_fin debe ser mayor que fecha_hora_inicio"
-        )
+        raise ValueError("fecha_hora_fin debe ser mayor que fecha_hora_inicio")
 
 
 class TurnoCrear(BaseModel):
     id_negocio: int
     id_cliente: int
     id_servicio: int
-    id_estado: int
-    id_empleado: int
     fecha_hora_inicio: datetime
-    fecha_hora_fin: Optional[datetime] = None
-
-    @model_validator(mode="after")
-    def validar_rango_horario(self):
-        _validar_rango_horario(self.fecha_hora_inicio, self.fecha_hora_fin)
-        return self
+    id_empleado: Optional[int] = None
 
 
 class TurnoActualizar(BaseModel):
@@ -65,4 +56,5 @@ class TurnoResponse(BaseModel):
     rechazado_motivo: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+
     model_config = ConfigDict(from_attributes=True)
