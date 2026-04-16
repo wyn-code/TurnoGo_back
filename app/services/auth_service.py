@@ -40,22 +40,38 @@ def register_user(db: Session, data: RegisterRequest) -> Usuario:
 
 
 def login_user(db: Session, data: LoginRequest) -> tuple[Usuario, TokenResponse]:
+    print("====== LOGIN DEBUG ======")
+    print("DATA:", data)
+
     usuario = db.query(Usuario).filter(Usuario.email_us == data.email_us).first()
+
     if not usuario:
+        print("❌ Usuario no encontrado")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Credenciales invalidas",
         )
 
-    if not verify_password(data.contrasena_us, usuario.contrasena_us):
+    print("------ DB DEBUG ------")
+    print("HASH DB:", usuario.contrasena_us)
+
+    print("---- VERIFY ----")
+    is_valid = verify_password(data.contrasena_us, usuario.contrasena_us)
+    print("VERIFY RESULT:", is_valid)
+
+    if not is_valid:
+        print("❌ Password no coincide")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Credenciales invalidas",
         )
+
+    print("✅ Login correcto")
 
     token = create_access_token(
         subject=usuario.id_us,
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
     )
+
     return usuario, TokenResponse(access_token=token)
 

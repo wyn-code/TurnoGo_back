@@ -18,9 +18,11 @@ def crear_usuario(db: Session, usuario: UsuarioCreate):
         email_us=usuario.email_us,
         contrasena_us=get_password_hash(usuario.contrasena_us),
     )
+
     db.add(nuevo_usuario)
     db.commit()
     db.refresh(nuevo_usuario)
+
     return nuevo_usuario
 
 def actualizar_usuario(db: Session, usuario_id: int, datos: UsuarioUpdate):
