@@ -29,7 +29,7 @@ def obtener_servicio_del_negocio(db: Session, id_servicio: int, id_negocio: int)
     servicio = db.query(Servicio).filter(
         Servicio.id_servicio == id_servicio,
         Servicio.id_negocio == id_negocio,
-        Servicio.activo == True,
+        Servicio.activo.is_(True)
     ).first()
 
     if not servicio:
@@ -51,6 +51,7 @@ def validar_rango_horario(inicio: datetime, fin: datetime | None):
 
 def hay_superposicion(
     db: Session,
+    id_negocio: int,
     id_empleado: int | None,
     inicio: datetime,
     fin: datetime | None,
@@ -60,6 +61,7 @@ def hay_superposicion(
         return False
 
     query = db.query(Turno).filter(
+        Turno.id_negocio == id_negocio,   
         Turno.id_empleado == id_empleado,
         Turno.fecha_hora_inicio < fin,
         Turno.fecha_hora_fin > inicio,
@@ -134,6 +136,7 @@ def crear_turno(db: Session, turno: TurnoCrear):
 
     if hay_superposicion(
         db=db,
+        id_negocio=turno.id_negocio,   
         id_empleado=turno.id_empleado,
         inicio=turno.fecha_hora_inicio,
         fin=fecha_hora_fin,
@@ -219,9 +222,9 @@ def actualizar_turno(db: Session, turno_id: int, datos: TurnoActualizar):
     )
 
     validar_rango_horario(nueva_fecha_inicio, nueva_fecha_fin)
-
     if hay_superposicion(
         db=db,
+        id_negocio=nuevo_id_negocio,   # 🔥 agregar
         id_empleado=nuevo_id_empleado,
         inicio=nueva_fecha_inicio,
         fin=nueva_fecha_fin,
@@ -280,7 +283,22 @@ def borrar_turno(db: Session, turno_id: int):
 
     except Exception as e:
         db.rollback()
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error al eliminar el turno: {str(e)}",
-        )
+        raise HTTPException(status_code=500, detail=f"Error al eliminar el turno: {str(e)}", )
+
+def listar_turnos_por_negocio_y_rango(
+    db: Session,
+    id_negocio: int,
+    desde: datetime,
+    hasta: datetime,
+    id_empleado: int | None = None,
+):
+    query = db.query(Turno).filter(
+        Turno.id_negocio == id_negocio,
+        Turno.fecha_hora_inicio < hasta,
+        Turno.fecha_hora_fin > desde,
+    )
+
+    if id_empleado is not None:
+        query = query.filter(Turno.id_empleado == id_empleado)
+
+    return query.order_by(Turno.fecha_hora_inicio.asc()).all()

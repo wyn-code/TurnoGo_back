@@ -6,9 +6,8 @@ from datetime import datetime
 class Negocio(Base):
     __tablename__ = "negocio"
 
-    id_negocio = Column(Integer, primary_key=True, index=True)
+    id_negocio = Column(Integer, primary_key=True, index=True, autoincrement=True)
 
-    # 👇 AGREGAR ESTO
     usuario_id = Column(Integer, ForeignKey("usuarios.id_us"), nullable=False, unique=True)
 
     nombre = Column(String(150), nullable=False)

@@ -12,7 +12,7 @@ class Usuario(Base):
     email_us = Column(String(50), nullable=False, unique=True)
     contrasena_us = Column(String(255), nullable=False)
 
-    role = Column(String(20), default="cliente")  # 👈 NUEVO
+    role = Column(String(20), default="cliente") 
 
     created_at = Column(DateTime, default=datetime.now)
 

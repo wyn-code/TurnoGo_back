@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from datetime import datetime
+
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-
 from app.schemas.appointment_schema import (
     TurnoCrear,
     TurnoActualizar,
@@ -14,9 +15,33 @@ from app.services.turno_service import (
     crear_turno,
     actualizar_turno,
     borrar_turno,
+    listar_turnos_por_negocio_y_rango,
 )
 
 router = APIRouter(prefix="/turnos", tags=["Turnos"])
+
+
+@router.get("/por-rango", response_model=list[TurnoResponse])
+def listar_por_rango(
+    id_negocio: int = Query(...),
+    desde: datetime = Query(..., description="Formato ISO: 2026-04-01T00:00:00"),
+    hasta: datetime = Query(..., description="Formato ISO: 2026-05-01T00:00:00"),
+    id_empleado: int | None = Query(None),
+    db: Session = Depends(get_db),
+):
+    if hasta <= desde:
+        raise HTTPException(
+            status_code=400,
+            detail="'hasta' debe ser mayor que 'desde'",
+        )
+
+    return listar_turnos_por_negocio_y_rango(
+        db=db,
+        id_negocio=id_negocio,
+        desde=desde,
+        hasta=hasta,
+        id_empleado=id_empleado,
+    )
 
 
 @router.get("/", response_model=list[TurnoResponse])
@@ -42,7 +67,6 @@ def actualizar(turno_id: int, datos: TurnoActualizar, db: Session = Depends(get_
     return actualizar_turno(db, turno_id, datos)
 
 
-@router.delete("/{turno_id}")
+@router.delete("/{turno_id}", status_code=204)
 def borrar(turno_id: int, db: Session = Depends(get_db)):
     borrar_turno(db, turno_id)
-    return {"mensaje": "Turno eliminado"}

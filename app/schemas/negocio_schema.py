@@ -17,9 +17,8 @@ class NegocioBase(BaseModel):
     logo: Optional[str] = None
     activo: bool = True
 
-
 class NegocioCreate(NegocioBase):
-    pass
+    usuario_id: int
 
 
 class ServicioNestedCreate(BaseModel):
@@ -59,10 +58,9 @@ class EmpleadoNestedResponse(EmpleadoNestedCreate):
 
 class NegocioResponse(NegocioBase):
     id_negocio: int
-    slug: str
     creado_at: datetime
-
     model_config = ConfigDict(from_attributes=True)
+    slug: str
 
 
 class NegocioCompleteResponse(NegocioResponse):

@@ -16,8 +16,14 @@ def listar_negocios(db: Session):
 
 
 def obtener_negocio_por_id(db: Session, negocio_id: int):
-    negocio = db.query(Negocio).filter(
-        Negocio.id_negocio == negocio_id).first()
+    negocio = db.query(Negocio).filter(Negocio.id_negocio == negocio_id).first()
+    if not negocio:
+        raise HTTPException(status_code=404, detail="Negocio no encontrado")
+    return negocio
+
+
+def obtener_negocio_por_slug(db: Session, slug: str):
+    negocio = db.query(Negocio).filter(Negocio.slug == slug).first()
     if not negocio:
         raise HTTPException(status_code=404, detail="Negocio no encontrado")
     return negocio
@@ -25,7 +31,8 @@ def obtener_negocio_por_id(db: Session, negocio_id: int):
 
 def slugify(texto: str) -> str:
     texto = unicodedata.normalize("NFKD", texto).encode(
-        "ascii", "ignore").decode("ascii")
+        "ascii", "ignore"
+    ).decode("ascii")
     texto = texto.lower().strip()
     texto = re.sub(r"[^a-z0-9\s-]", "", texto)
     texto = re.sub(r"[\s-]+", "-", texto)
@@ -45,9 +52,10 @@ def generar_slug_unico(db: Session, nombre: str) -> str:
 
 
 def crear_negocio(db: Session, data: NegocioCreate):
-    slug = getattr(data, "slug", None) or generar_slug_unico(db, data.nombre)
+    slug = generar_slug_unico(db, data.nombre)
 
     nuevo_negocio = Negocio(
+        usuario_id=data.usuario_id,
         nombre=data.nombre,
         rubro=data.rubro,
         wsp=data.wsp,
@@ -57,9 +65,9 @@ def crear_negocio(db: Session, data: NegocioCreate):
         id_localidad=data.id_localidad,
         id_provincia=data.id_provincia,
         ig_url=data.ig_url,
+        slug=slug,
         logo=data.logo,
         activo=data.activo,
-        slug=slug,
     )
 
     try:
@@ -72,14 +80,15 @@ def crear_negocio(db: Session, data: NegocioCreate):
         db.rollback()
         raise HTTPException(
             status_code=400,
-            detail=f"Error de integridad al crear negocio: {str(e.orig)}"
+            detail=f"Error de integridad al crear negocio: {str(e.orig)}",
         ) from e
 
 
 def crear_negocio_completo(db: Session, data: NegocioCompleteCreate):
-    slug = getattr(data, "slug", None) or generar_slug_unico(db, data.nombre)
+    slug = generar_slug_unico(db, data.nombre)
 
     nuevo_negocio = Negocio(
+        usuario_id=data.usuario_id,
         nombre=data.nombre,
         rubro=data.rubro,
         wsp=data.wsp,
@@ -128,12 +137,12 @@ def crear_negocio_completo(db: Session, data: NegocioCompleteCreate):
         db.rollback()
         raise HTTPException(
             status_code=400,
-            detail=f"Error de integridad al crear negocio completo: {str(e.orig)}"
+            detail=f"Error de integridad al crear negocio completo: {str(e.orig)}",
         ) from e
 
     except Exception as e:
         db.rollback()
         raise HTTPException(
             status_code=500,
-            detail=f"Error al crear negocio completo: {str(e)}"
+            detail=f"Error al crear negocio completo: {str(e)}",
         ) from e

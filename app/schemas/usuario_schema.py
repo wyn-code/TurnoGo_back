@@ -21,5 +21,5 @@ class UsuarioUpdate(BaseModel):
 class UsuarioResponse(UsuarioBase):
     id_us: int
     created_at: Optional[datetime] = None
-
+    role: str 
     model_config = ConfigDict(from_attributes=True)

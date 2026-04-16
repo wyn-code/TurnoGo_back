@@ -18,6 +18,7 @@ from app.routers import (
     servicio_router,
     turno_router,
     usuario,
+    cliente_router,
 )
 
 app = FastAPI(title="Turnexo")
@@ -54,3 +55,4 @@ app.include_router(empleado_router.router, prefix="/api", tags=["Empleados"])
 app.include_router(servicio_router.router, prefix="/api")
 app.include_router(negocio_router.router, prefix="/api")
 app.include_router(categoria_router.router, prefix="/api", tags=["Categorias"])
+app.include_router(cliente_router.router, prefix="/api", tags=["Clientes"])

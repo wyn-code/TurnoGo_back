@@ -17,5 +17,4 @@ class EmpleadoCreate(EmpleadoBase):
 class EmpleadoResponse(EmpleadoBase):
     id_empleado: int
     id_negocio: int
-    created_at: Optional[datetime] = None
     model_config = ConfigDict(from_attributes=True)

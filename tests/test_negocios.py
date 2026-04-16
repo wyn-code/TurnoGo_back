@@ -1,25 +1,22 @@
 def test_listar_negocios_vacio(client):
     response = client.get("/api/negocios/")
-
     assert response.status_code == 200
     assert response.json() == []
 
 
 def test_traer_negocio_inexistente_por_id(client):
-    response = client.get("/api/negocios/id/999")
-
+    response = client.get("/api/negocios/999")
     assert response.status_code == 404
     assert response.json() == {"detail": "Negocio no encontrado"}
 
 
 def test_traer_negocio_inexistente_por_slug(client):
     response = client.get("/api/negocios/slug/no-existe")
-
     assert response.status_code == 404
     assert response.json() == {"detail": "Negocio no encontrado"}
 
 
-def test_crear_negocio(client):
+def test_crear_negocio(client, seed_data):
     data = {
         "nombre": "Barberia Rocco",
         "rubro": "Barberia",
@@ -28,12 +25,12 @@ def test_crear_negocio(client):
         "direccion": "Mitre 123",
         "ciudad": "San Nicolas",
         "slug": "barberia-rocco",
-        "activo": True
+        "activo": True,
+        "usuario_id": 2,
     }
 
     response = client.post("/api/negocios/", json=data)
-
-    assert response.status_code in [200, 201]
+    assert response.status_code in [200, 201], response.text
 
     body = response.json()
     assert body["nombre"] == data["nombre"]
@@ -42,11 +39,10 @@ def test_crear_negocio(client):
     assert body["telefono"] == data["telefono"]
     assert body["direccion"] == data["direccion"]
     assert body["ciudad"] == data["ciudad"]
-    assert body["slug"] == data["slug"]
     assert body["activo"] == data["activo"]
 
 
-def test_listar_negocios_con_un_registro(client):
+def test_listar_negocios_con_un_registro(client, seed_data):
     data = {
         "nombre": "Negocio Test",
         "rubro": "Peluqueria",
@@ -55,22 +51,22 @@ def test_listar_negocios_con_un_registro(client):
         "direccion": "Belgrano 456",
         "ciudad": "San Nicolas",
         "slug": "negocio-test",
-        "activo": True
+        "activo": True,
+        "usuario_id": 2,
     }
 
     create_response = client.post("/api/negocios/", json=data)
-    assert create_response.status_code in [200, 201]
+    assert create_response.status_code in [200, 201], create_response.text
 
     list_response = client.get("/api/negocios/")
     assert list_response.status_code == 200
 
     negocios = list_response.json()
-    assert len(negocios) == 1
-    assert negocios[0]["nombre"] == "Negocio Test"
-    assert negocios[0]["slug"] == "negocio-test"
+    assert len(negocios) >= 1
+    assert any(n["nombre"] == "Negocio Test" for n in negocios)
 
 
-def test_traer_negocio_por_id(client):
+def test_traer_negocio_por_id(client, seed_data):
     data = {
         "nombre": "Negocio ID Test",
         "rubro": "Barberia",
@@ -79,25 +75,25 @@ def test_traer_negocio_por_id(client):
         "direccion": "Test 123",
         "ciudad": "San Nicolas",
         "slug": "negocio-id-test",
-        "activo": True
+        "activo": True,
+        "usuario_id": 2,
     }
 
     create_response = client.post("/api/negocios/", json=data)
-    assert create_response.status_code in [200, 201]
+    assert create_response.status_code in [200, 201], create_response.text
 
     negocio_creado = create_response.json()
     negocio_id = negocio_creado["id_negocio"]
 
-    get_response = client.get(f"/api/negocios/id/{negocio_id}")
+    get_response = client.get(f"/api/negocios/{negocio_id}")
     assert get_response.status_code == 200
 
     body = get_response.json()
     assert body["id_negocio"] == negocio_id
     assert body["nombre"] == data["nombre"]
-    assert body["slug"] == data["slug"]
 
 
-def test_traer_negocio_por_slug(client):
+def test_traer_negocio_por_slug(client, seed_data):
     data = {
         "nombre": "Negocio Slug Test",
         "rubro": "Barberia",
@@ -106,15 +102,18 @@ def test_traer_negocio_por_slug(client):
         "direccion": "Slug 123",
         "ciudad": "San Nicolas",
         "slug": "negocio-slug-test",
-        "activo": True
+        "activo": True,
+        "usuario_id": 2,
     }
 
     create_response = client.post("/api/negocios/", json=data)
-    assert create_response.status_code in [200, 201]
+    assert create_response.status_code in [200, 201], create_response.text
 
     get_response = client.get("/api/negocios/slug/negocio-slug-test")
     assert get_response.status_code == 200
 
     body = get_response.json()
+    print(body)
+
     assert body["nombre"] == data["nombre"]
-    assert body["slug"] == data["slug"]
+    assert body["slug"] == "negocio-slug-test"

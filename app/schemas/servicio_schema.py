@@ -8,7 +8,7 @@ class ServicioBase(BaseModel):
     precio: float
     requiere_aprobacion: bool
     duracion_min: int
-    duracion_max: Optional[int] = None
+    duracion_max: int
     activo: bool = True
 
 

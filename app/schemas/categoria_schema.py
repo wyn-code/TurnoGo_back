@@ -1,5 +1,5 @@
-from datetime import datetime
 from typing import Optional
+from pydantic import ConfigDict
 
 from pydantic import BaseModel, Field
 
@@ -20,7 +20,4 @@ class CategoriaUpdate(BaseModel):
 
 class CategoriaResponse(CategoriaBase):
     id_categoria: int
-    created_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
