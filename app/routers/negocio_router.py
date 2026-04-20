@@ -1,6 +1,11 @@
+<<<<<<< HEAD
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+=======
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+>>>>>>> a2c1500 (se vinculo categoría con negocio)
 from app.db.session import get_db
 from app.schemas.negocio_schema import (
     NegocioCreate,
@@ -24,6 +29,7 @@ router = APIRouter(prefix="/negocios", tags=["Negocios"])
 def ver_negocios(db: Session = Depends(get_db)):
     return listar_negocios(db)
 
+
 @router.get("/admin", response_model=list[NegocioResponse])
 def ver_negocios_admin(db: Session = Depends(get_db)):
     return listar_negocios_admin(db)
@@ -39,33 +45,64 @@ def ver_negocio_por_slug(slug: str, db: Session = Depends(get_db)):
 
 @router.get("/{negocio_id}", response_model=NegocioResponse)
 def ver_negocio_por_id(negocio_id: int, db: Session = Depends(get_db)):
-    return obtener_negocio_por_id(db, negocio_id)
+    negocio = obtener_negocio_por_id(db, negocio_id)
+    if not negocio:
+        raise HTTPException(status_code=404, detail="Negocio no encontrado")
+    return negocio
 
 
-@router.post("/", response_model=NegocioResponse, status_code=201)
+@router.post("/", response_model=NegocioResponse, status_code=status.HTTP_201_CREATED)
 def post_negocio(data: NegocioCreate, db: Session = Depends(get_db)):
+    # Debug opcional
+    print(data.dict())
+
+    if data.id_categoria is None:
+        raise HTTPException(status_code=400, detail="id_categoria es obligatorio")
+
     return crear_negocio(db, data)
 
 
-@router.post("/complete", response_model=NegocioCompleteResponse, status_code=201)
+@router.post("/complete", response_model=NegocioCompleteResponse, status_code=status.HTTP_201_CREATED)
 def post_negocio_completo(data: NegocioCompleteCreate, db: Session = Depends(get_db)):
+    # Debug opcional
+    print(data.dict())
+
+    if data.id_categoria is None:
+        raise HTTPException(status_code=400, detail="id_categoria es obligatorio")
+
     return crear_negocio_completo(db, data)
 
 
 @router.put("/{negocio_id}", response_model=NegocioResponse)
 def update_negocio(negocio_id: int, data: NegocioCreate, db: Session = Depends(get_db)):
     negocio = obtener_negocio_por_id(db, negocio_id)
+<<<<<<< HEAD
+=======
+
+    if not negocio:
+        raise HTTPException(status_code=404, detail="Negocio no encontrado")
+>>>>>>> a2c1500 (se vinculo categoría con negocio)
 
     for key, value in data.model_dump().items():
         setattr(negocio, key, value)
 
     db.commit()
     db.refresh(negocio)
+
     return negocio
 
 
-@router.delete("/{negocio_id}", status_code=204)
+@router.delete("/{negocio_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_negocio(negocio_id: int, db: Session = Depends(get_db)):
     negocio = obtener_negocio_por_id(db, negocio_id)
+<<<<<<< HEAD
+=======
+
+    if not negocio:
+        raise HTTPException(status_code=404, detail="Negocio no encontrado")
+
+>>>>>>> a2c1500 (se vinculo categoría con negocio)
     db.delete(negocio)
     db.commit()
+
+    return None

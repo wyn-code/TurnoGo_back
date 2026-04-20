@@ -62,9 +62,15 @@ def slugify(texto: str) -> str:
     texto = re.sub(r"[\s-]+", "-", texto)
     return texto
 
+def generar_slug(nombre: str) -> str:
+    slug = nombre.lower()
+    slug = re.sub(r"\s+", "-", slug)
+    slug = re.sub(r"[^a-z0-9\-]", "", slug)
+    return slug
 
-def generar_slug_unico(db: Session, nombre: str) -> str:
-    base_slug = slugify(nombre)
+
+def generar_slug_unico(db, nombre: str):
+    base_slug = generar_slug(nombre)
     slug = base_slug
     contador = 1
 
@@ -76,6 +82,14 @@ def generar_slug_unico(db: Session, nombre: str) -> str:
 
 
 def crear_negocio(db: Session, data: NegocioCreate):
+    # 🔥 Validaciones
+    if data.id_categoria is None:
+        raise HTTPException(status_code=400, detail="id_categoria es obligatorio")
+
+    if data.usuario_id is None:
+        raise HTTPException(status_code=400, detail="usuario_id es obligatorio")
+
+    # 🔥 Slug único (mejor que el simple)
     slug = generar_slug_unico(db, data.nombre)
 
     nuevo_negocio = Negocio(
@@ -89,9 +103,10 @@ def crear_negocio(db: Session, data: NegocioCreate):
         id_localidad=data.id_localidad,
         id_provincia=data.id_provincia,
         ig_url=data.ig_url,
-        slug=slug,
         logo=data.logo,
         activo=data.activo,
+        id_categoria=data.id_categoria,
+        slug=slug,
     )
 
     try:
@@ -106,7 +121,6 @@ def crear_negocio(db: Session, data: NegocioCreate):
             status_code=400,
             detail=f"Error de integridad al crear negocio: {str(e.orig)}",
         ) from e
-
 
 def crear_negocio_completo(db: Session, data: NegocioCompleteCreate):
     slug = generar_slug_unico(db, data.nombre)

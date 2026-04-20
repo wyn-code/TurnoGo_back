@@ -16,6 +16,8 @@ class NegocioBase(BaseModel):
     ig_url: Optional[str] = None
     logo: Optional[str] = None
     activo: bool = True
+    usuario_id: int 
+    id_categoria: int
 
 class NegocioCreate(NegocioBase):
     usuario_id: int
@@ -28,6 +30,7 @@ class ServicioNestedCreate(BaseModel):
     duracion_min: int
     duracion_max: int
     activo: bool = True
+    id_categoria: int
 
 
 class EmpleadoNestedCreate(BaseModel):
