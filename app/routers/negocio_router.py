@@ -10,6 +10,7 @@ from app.schemas.negocio_schema import (
 )
 from app.services.negocio_service import (
     listar_negocios,
+    listar_negocios_admin,
     obtener_negocio_por_id,
     obtener_negocio_por_slug,
     crear_negocio,
@@ -22,6 +23,10 @@ router = APIRouter(prefix="/negocios", tags=["Negocios"])
 @router.get("/", response_model=list[NegocioResponse])
 def ver_negocios(db: Session = Depends(get_db)):
     return listar_negocios(db)
+
+@router.get("/admin", response_model=list[NegocioResponse])
+def ver_negocios_admin(db: Session = Depends(get_db)):
+    return listar_negocios_admin(db)
 
 
 @router.get("/slug/{slug}", response_model=NegocioResponse)

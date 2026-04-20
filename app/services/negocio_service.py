@@ -1,6 +1,6 @@
 import re
 import unicodedata
-
+from app.models.usuario import Usuario
 from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -13,6 +13,30 @@ from app.schemas.negocio_schema import NegocioCreate, NegocioCompleteCreate
 
 def listar_negocios(db: Session):
     return db.query(Negocio).all()
+
+def listar_negocios_admin(db: Session):
+    resultados = (
+        db.query(Negocio, Usuario)
+        .join(Usuario, Negocio.usuario_id == Usuario.id_us)
+        .all()
+    )
+
+    negocios = []
+
+    for negocio, usuario in resultados:
+        negocios.append({
+            "id_negocio": negocio.id_negocio,
+            "nombre": negocio.nombre,
+            "rubro": negocio.rubro,
+            "slug": negocio.slug,
+            "activo": negocio.activo,
+            "duenio": {
+                "nombre": usuario.usuario_us,
+                "email": usuario.email_us
+            }
+        })
+
+    return negocios
 
 
 def obtener_negocio_por_id(db: Session, negocio_id: int):
