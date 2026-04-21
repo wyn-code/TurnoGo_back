@@ -6,12 +6,7 @@ from datetime import datetime
 class Negocio(Base):
     __tablename__ = "negocio"
 
-<<<<<<< HEAD
-    id_negocio = Column(Integer, primary_key=True, index=True, autoincrement=True)
-
-=======
     id_negocio = Column(Integer, primary_key=True, index=True)
->>>>>>> a2c1500 (se vinculo categoría con negocio)
     usuario_id = Column(Integer, ForeignKey("usuarios.id_us"), nullable=False, unique=True)
     nombre = Column(String(150), nullable=False)
     rubro = Column(String(100), nullable=False)

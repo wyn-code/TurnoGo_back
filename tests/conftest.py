@@ -78,6 +78,7 @@ def seed_data(db):
     from app.models.servicio import Servicio
     from app.models.empleado import Empleado
     from app.models.usuario import Usuario
+    from app.models.categoria import Categoria
 
     usuario_1 = Usuario(
         id_us=1,
@@ -91,9 +92,15 @@ def seed_data(db):
         email_us="test2@test.com",
         contrasena_us="123456"
     )
-
     db.add_all([usuario_1, usuario_2])
     db.flush()
+
+    categoria_prueba = Categoria(
+        nombre="Categoría Test"
+    )
+    db.add(categoria_prueba)
+    db.flush()
+
 
     negocio = Negocio(
         id_negocio=1,
@@ -105,6 +112,7 @@ def seed_data(db):
         ciudad="San Nicolas",
         activo=True,
         slug="test-negocio",
+        id_categoria = 1,
     )
     db.add(negocio)
     db.flush()

@@ -2,14 +2,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
-# 🔥 DB
+#  DB
 from app.db.database import engine
 from app.db.base import Base
 
-# 🔥 IMPORTAR MODELOS (CLAVE para crear tablas)
+#  IMPORTAR MODELOS (CLAVE para crear tablas)
 from app.models.categoria import Categoria
 
-# 🔥 Routers
+#  Routers
 from app.routers import (
     auth_router,
     categoria_router,
@@ -23,10 +23,8 @@ from app.routers import (
 
 app = FastAPI(title="Turnexo")
 
-# 🔥 Crear tablas automáticamente
-Base.metadata.create_all(bind=engine)
 
-# 🔥 CORS
+#  CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # desarrollo
@@ -35,19 +33,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 🔥 Healthcheck
+#  Healthcheck
 @app.get("/", summary="Healthcheck")
 def root():
     return {"mensaje": "API Turnexo funcionando"}
 
-# 🔥 Test DB
+#  Test DB
 @app.get("/db-test", summary="Prueba conexión DB")
 def test_db():
     with engine.connect() as connection:
         result = connection.execute(text("SELECT 'conexion OK con postgres'"))
         return {"resultado": result.scalar()}
 
-# 🔥 Routers
+#  Routers
 app.include_router(usuario.router, prefix="/api", tags=["Usuarios"])
 app.include_router(auth_router.router, prefix="/api")
 app.include_router(turno_router.router, prefix="/api", tags=["Turnos"])

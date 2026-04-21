@@ -1,11 +1,10 @@
 import re
 import unicodedata
+from app.models.negocio import Negocio
 from app.models.usuario import Usuario
 from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-
-from app.models.negocio import Negocio
 from app.models.servicio import Servicio
 from app.models.empleado import Empleado
 from app.schemas.negocio_schema import NegocioCreate, NegocioCompleteCreate

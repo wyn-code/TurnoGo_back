@@ -157,8 +157,6 @@ def crear_turno(db: Session, turno: TurnoCrear):
         id_empleado=turno.id_empleado,
         fecha_hora_inicio=turno.fecha_hora_inicio,
         fecha_hora_fin=fecha_hora_fin,
-        id_admin_aprobador=None,
-        aprobado_at=None,
         rechazado_motivo=None,
         created_at=ahora,
         updated_at=ahora,
@@ -248,12 +246,6 @@ def actualizar_turno(db: Session, turno_id: int, datos: TurnoActualizar):
     # Si cambió el servicio y NO te mandaron estado, podés mantener el actual.
     if datos.id_estado is not None:
         turno_db.id_estado = datos.id_estado
-
-    if datos.id_admin_aprobador is not None:
-        turno_db.id_admin_aprobador = datos.id_admin_aprobador
-
-    if datos.aprobado_at is not None:
-        turno_db.aprobado_at = datos.aprobado_at
 
     if datos.rechazado_motivo is not None:
         turno_db.rechazado_motivo = datos.rechazado_motivo

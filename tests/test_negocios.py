@@ -27,6 +27,7 @@ def test_crear_negocio(client, seed_data):
         "slug": "barberia-rocco",
         "activo": True,
         "usuario_id": 2,
+        "id_categoria": 1,
     }
 
     response = client.post("/api/negocios/", json=data)
@@ -53,6 +54,7 @@ def test_listar_negocios_con_un_registro(client, seed_data):
         "slug": "negocio-test",
         "activo": True,
         "usuario_id": 2,
+        "id_categoria": 1,
     }
 
     create_response = client.post("/api/negocios/", json=data)
@@ -77,6 +79,7 @@ def test_traer_negocio_por_id(client, seed_data):
         "slug": "negocio-id-test",
         "activo": True,
         "usuario_id": 2,
+        "id_categoria": 1,
     }
 
     create_response = client.post("/api/negocios/", json=data)
@@ -104,6 +107,7 @@ def test_traer_negocio_por_slug(client, seed_data):
         "slug": "negocio-slug-test",
         "activo": True,
         "usuario_id": 2,
+        "id_categoria": 1,
     }
 
     create_response = client.post("/api/negocios/", json=data)

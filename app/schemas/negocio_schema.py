@@ -1,7 +1,8 @@
 from datetime import datetime
 from typing import Optional, List
-
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+from app.schemas.servicio_schema import ServicioCreate, ServicioResponse
+from app.schemas.empleado_schema import EmpleadoCreate, EmpleadoResponse
 
 
 class NegocioBase(BaseModel):
@@ -16,58 +17,23 @@ class NegocioBase(BaseModel):
     ig_url: Optional[str] = None
     logo: Optional[str] = None
     activo: bool = True
-    usuario_id: int 
-    id_categoria: int
 
 class NegocioCreate(NegocioBase):
     usuario_id: int
-
-
-class ServicioNestedCreate(BaseModel):
-    nombre_servicio: str
-    precio: float
-    requiere_aprobacion: bool = False
-    duracion_min: int
-    duracion_max: int
-    activo: bool = True
     id_categoria: int
-
-
-class EmpleadoNestedCreate(BaseModel):
-    nombre: str
-    apellido: str
-    telefono: str
-    activo: bool = True
-
-
-class NegocioCompleteCreate(NegocioCreate):
-    servicios: List[ServicioNestedCreate] = []
-    empleados: List[EmpleadoNestedCreate] = []
-
-
-class ServicioNestedResponse(ServicioNestedCreate):
-    id_servicio: int
-    id_negocio: int
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class EmpleadoNestedResponse(EmpleadoNestedCreate):
-    id_empleado: int
-    id_negocio: int
-
-    model_config = ConfigDict(from_attributes=True)
-
 
 class NegocioResponse(NegocioBase):
     id_negocio: int
     creado_at: datetime
+    usuario_id: Optional[int] = None
+    id_categoria: Optional[int] = None
+    slug: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
-    slug: str
 
+class NegocioCompleteCreate(NegocioCreate):
+    servicios: List[ServicioCreate] = Field(default_factory=list)
+    empleados: List[EmpleadoCreate] = Field(default_factory=list)
 
 class NegocioCompleteResponse(NegocioResponse):
-    servicios: List[ServicioNestedResponse] = []
-    empleados: List[EmpleadoNestedResponse] = []
-
-    model_config = ConfigDict(from_attributes=True)
+    servicios: List[ServicioResponse] = Field(default_factory=list)
+    empleados: List[EmpleadoResponse] = Field(default_factory=list)

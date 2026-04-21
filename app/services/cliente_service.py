@@ -26,7 +26,8 @@ def validar_cliente(datos: ClienteCreate):
     telefono = normalizar_telefono(datos.telefono)
 
     if not telefono:
-        raise HTTPException(status_code=400, detail="El teléfono es obligatorio")
+        raise HTTPException(
+            status_code=400, detail="El teléfono es obligatorio")
 
     if len(re.sub(r"\D", "", telefono)) < 8:
         raise HTTPException(status_code=400, detail="El teléfono no es válido")
@@ -35,7 +36,8 @@ def validar_cliente(datos: ClienteCreate):
         raise HTTPException(status_code=400, detail="El nombre es obligatorio")
 
     if not datos.apellido.strip():
-        raise HTTPException(status_code=400, detail="El apellido es obligatorio")
+        raise HTTPException(
+            status_code=400, detail="El apellido es obligatorio")
 
     return telefono
 

@@ -15,5 +15,4 @@ class ClienteCreate(ClienteBase):
 class ClienteResponse(ClienteBase):
     id_cliente: int
     created_at: Optional[datetime] = None
-
     model_config = ConfigDict(from_attributes=True)

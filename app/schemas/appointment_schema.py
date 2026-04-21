@@ -32,8 +32,6 @@ class TurnoActualizar(BaseModel):
     id_empleado: Optional[int] = None
     fecha_hora_inicio: Optional[datetime] = None
     fecha_hora_fin: Optional[datetime] = None
-    id_admin_aprobador: Optional[int] = None
-    aprobado_at: Optional[datetime] = None
     rechazado_motivo: Optional[str] = None
 
     @model_validator(mode="after")
@@ -51,10 +49,7 @@ class TurnoResponse(BaseModel):
     id_empleado: Optional[int] = None
     fecha_hora_inicio: datetime
     fecha_hora_fin: Optional[datetime] = None
-    id_admin_aprobador: Optional[int] = None
-    aprobado_at: Optional[datetime] = None
     rechazado_motivo: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-
     model_config = ConfigDict(from_attributes=True)
