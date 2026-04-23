@@ -1,21 +1,26 @@
 import re
 import unicodedata
-from app.models.negocio import Negocio
-from app.models.usuario import Usuario
 from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
+
+from app.models.negocio import Negocio
+from app.models.usuario import Usuario
 from app.models.servicio import Servicio
 from app.models.empleado import Empleado
+from app.models.categoria import Categoria
+
 from app.schemas.negocio_schema import NegocioCreate, NegocioCompleteCreate
 
 
 def listar_negocios(db: Session):
     return db.query(Negocio).all()
 
+
 def listar_negocios_admin(db: Session):
     resultados = (
         db.query(Negocio, Usuario)
+        .options(joinedload(Negocio.categoria))
         .join(Usuario, Negocio.usuario_id == Usuario.id_us)
         .all()
     )
@@ -26,7 +31,7 @@ def listar_negocios_admin(db: Session):
         negocios.append({
             "id_negocio": negocio.id_negocio,
             "nombre": negocio.nombre,
-            "rubro": negocio.rubro,
+            "categoria": negocio.categoria.nombre if negocio.categoria else None,
             "slug": negocio.slug,
             "activo": negocio.activo,
             "duenio": {
@@ -39,27 +44,22 @@ def listar_negocios_admin(db: Session):
 
 
 def obtener_negocio_por_id(db: Session, negocio_id: int):
-    negocio = db.query(Negocio).filter(Negocio.id_negocio == negocio_id).first()
+    negocio = db.query(Negocio).options(
+        joinedload(Negocio.categoria)
+    ).filter(Negocio.id_negocio == negocio_id).first()
     if not negocio:
         raise HTTPException(status_code=404, detail="Negocio no encontrado")
     return negocio
 
 
 def obtener_negocio_por_slug(db: Session, slug: str):
-    negocio = db.query(Negocio).filter(Negocio.slug == slug).first()
+    negocio = db.query(Negocio).options(
+        joinedload(Negocio.categoria)
+    ).filter(Negocio.slug == slug).first()
     if not negocio:
         raise HTTPException(status_code=404, detail="Negocio no encontrado")
     return negocio
 
-
-def slugify(texto: str) -> str:
-    texto = unicodedata.normalize("NFKD", texto).encode(
-        "ascii", "ignore"
-    ).decode("ascii")
-    texto = texto.lower().strip()
-    texto = re.sub(r"[^a-z0-9\s-]", "", texto)
-    texto = re.sub(r"[\s-]+", "-", texto)
-    return texto
 
 def generar_slug(nombre: str) -> str:
     slug = nombre.lower()
@@ -80,21 +80,32 @@ def generar_slug_unico(db, nombre: str):
     return slug
 
 
+# ==============================
+# 🔥 CREAR NEGOCIO SIMPLE
+# ==============================
 def crear_negocio(db: Session, data: NegocioCreate):
-    # 🔥 Validaciones
-    if data.id_categoria is None:
-        raise HTTPException(status_code=400, detail="id_categoria es obligatorio")
 
     if data.usuario_id is None:
-        raise HTTPException(status_code=400, detail="usuario_id es obligatorio")
+        raise HTTPException(
+            status_code=400, detail="usuario_id es obligatorio")
 
-    # 🔥 Slug único (mejor que el simple)
+    if data.id_categoria is None:
+        raise HTTPException(
+            status_code=400, detail="id_categoria es obligatorio")
+
+    # 🔥 Obtener categoría
+    categoria = db.query(Categoria).filter(
+        Categoria.id_categoria == data.id_categoria
+    ).first()
+
+    if not categoria:
+        raise HTTPException(status_code=400, detail="Categoría no válida")
+
     slug = generar_slug_unico(db, data.nombre)
 
     nuevo_negocio = Negocio(
         usuario_id=data.usuario_id,
         nombre=data.nombre,
-        rubro=data.rubro,
         wsp=data.wsp,
         telefono=data.telefono,
         direccion=data.direccion,
@@ -119,15 +130,38 @@ def crear_negocio(db: Session, data: NegocioCreate):
         raise HTTPException(
             status_code=400,
             detail=f"Error de integridad al crear negocio: {str(e.orig)}",
-        ) from e
+        )
 
+
+# ==============================
+# 🔥 CREAR NEGOCIO COMPLETO
+# ==============================
 def crear_negocio_completo(db: Session, data: NegocioCompleteCreate):
+
+    if data.usuario_id is None:
+        raise HTTPException(
+            status_code=400, detail="usuario_id es obligatorio")
+
+    if data.id_categoria is None:
+        raise HTTPException(
+            status_code=400, detail="id_categoria es obligatorio")
+
+    # 🔥 Obtener categoría
+    categoria = db.query(Categoria).filter(
+        Categoria.id_categoria == data.id_categoria
+    ).first()
+
+    if not categoria:
+        raise HTTPException(status_code=400, detail="Categoría no válida")
+
+    # ❌ ELIMINAMOS LA VARIABLE rubro = categoria.nombre (ya no se usa)
+
     slug = generar_slug_unico(db, data.nombre)
 
     nuevo_negocio = Negocio(
         usuario_id=data.usuario_id,
         nombre=data.nombre,
-        rubro=data.rubro,
+        # ✅ ELIMINADA la línea rubro=rubro
         wsp=data.wsp,
         telefono=data.telefono,
         direccion=data.direccion,
@@ -137,15 +171,17 @@ def crear_negocio_completo(db: Session, data: NegocioCompleteCreate):
         ig_url=data.ig_url,
         logo=data.logo,
         activo=data.activo,
+        id_categoria=data.id_categoria,  # 👈 Esto es lo que importa ahora
         slug=slug,
     )
 
     try:
         db.add(nuevo_negocio)
-        db.flush()
+        db.flush()  # 🔥 obtiene id_negocio sin commit
 
+        # 🔥 Servicios
         for servicio in data.servicios:
-            nuevo_servicio = Servicio(
+            db.add(Servicio(
                 id_negocio=nuevo_negocio.id_negocio,
                 nombre_servicio=servicio.nombre_servicio,
                 precio=servicio.precio,
@@ -153,33 +189,22 @@ def crear_negocio_completo(db: Session, data: NegocioCompleteCreate):
                 duracion_min=servicio.duracion_min,
                 duracion_max=servicio.duracion_max,
                 activo=servicio.activo,
-            )
-            db.add(nuevo_servicio)
+            ))
 
+        # 🔥 Empleados
         for empleado in data.empleados:
-            nuevo_empleado = Empleado(
+            db.add(Empleado(
                 id_negocio=nuevo_negocio.id_negocio,
                 nombre=empleado.nombre,
                 apellido=empleado.apellido,
                 telefono=empleado.telefono,
                 activo=empleado.activo,
-            )
-            db.add(nuevo_empleado)
+            ))
 
         db.commit()
         db.refresh(nuevo_negocio)
         return nuevo_negocio
 
-    except IntegrityError as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=400,
-            detail=f"Error de integridad al crear negocio completo: {str(e.orig)}",
-        ) from e
-
     except Exception as e:
         db.rollback()
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error al crear negocio completo: {str(e)}",
-        ) from e
+        raise HTTPException(status_code=500, detail=str(e))

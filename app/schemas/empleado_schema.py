@@ -1,16 +1,17 @@
 from pydantic import BaseModel, ConfigDict
 
+
 class EmpleadoBase(BaseModel):
     nombre: str
     apellido: str
     telefono: str
-    activo: bool
+    activo: bool = True  # 👈 le damos default por si no viene
+
 
 class EmpleadoCreate(EmpleadoBase):
-    id_negocio: int
+    pass
 
 
 class EmpleadoResponse(EmpleadoBase):
     id_empleado: int
-    id_negocio: int
     model_config = ConfigDict(from_attributes=True)

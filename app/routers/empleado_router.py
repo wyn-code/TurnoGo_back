@@ -14,8 +14,8 @@ router = APIRouter(prefix="/empleados", tags=["Empleados"])
 
 
 @router.get("/", response_model=list[EmpleadoResponse])
-def listar(db: Session = Depends(get_db)):
-    return ver_empleados(db)
+def listar(id_negocio: int = None, db: Session = Depends(get_db)):
+    return ver_empleados(db, id_negocio=id_negocio)
 
 
 @router.get("/{empleado_id}", response_model=EmpleadoResponse)

@@ -4,14 +4,14 @@ from pydantic import BaseModel, ConfigDict
 class ServicioBase(BaseModel):
     nombre_servicio: str
     precio: float
-    requiere_aprobacion: bool
+    requiere_aprobacion: bool = False  # 👈 default útil
     duracion_min: int
     duracion_max: int
     activo: bool = True
 
 
 class ServicioCreate(ServicioBase):
-    id_negocio: int
+    pass
 
 
 class ServicioResponse(ServicioBase):

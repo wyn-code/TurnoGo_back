@@ -2,7 +2,7 @@ from sqlalchemy import Column, DateTime, ForeignKey, Text, Integer
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.db.base import Base
-from app.models.estado_turno import EstadoTurno 
+from app.models.estado_turno import EstadoTurno
 
 
 class Turno(Base):

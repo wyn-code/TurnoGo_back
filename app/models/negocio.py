@@ -3,13 +3,13 @@ from sqlalchemy.orm import relationship
 from app.db.base import Base
 from datetime import datetime
 
+
 class Negocio(Base):
     __tablename__ = "negocio"
 
     id_negocio = Column(Integer, primary_key=True, index=True)
     usuario_id = Column(Integer, ForeignKey("usuarios.id_us"), nullable=False, unique=True)
     nombre = Column(String(150), nullable=False)
-    rubro = Column(String(100), nullable=False)
     wsp = Column(String(20), nullable=False)
     telefono = Column(String(20), nullable=True)
     direccion = Column(String(200), nullable=False)
@@ -26,6 +26,5 @@ class Negocio(Base):
     turnos = relationship("Turno", back_populates="negocio")
     servicios = relationship("Servicio", back_populates="negocio", cascade="all, delete-orphan")
     empleados = relationship("Empleado", back_populates="negocio", cascade="all, delete-orphan")
-
     usuario = relationship("Usuario", back_populates="negocio")
     categoria = relationship("Categoria", back_populates="negocios")

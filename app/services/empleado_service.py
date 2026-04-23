@@ -10,8 +10,14 @@ def _query_empleado_por_id(db: Session, empleado_id: int):
     return db.query(Empleado).filter(Empleado.id_empleado == empleado_id)
 
 
-def ver_empleados(db: Session):
-    return db.query(Empleado).all()
+def ver_empleados(db: Session, id_negocio: int = None):
+    query = db.query(Empleado)
+
+    # Si nos pasan un id_negocio, filtramos. Si no, devuelve todos.
+    if id_negocio:
+        query = query.filter(Empleado.id_negocio == id_negocio)
+
+    return query.all()
 
 
 def ver_empleado_por_id(db: Session, empleado_id: int):
@@ -19,7 +25,8 @@ def ver_empleado_por_id(db: Session, empleado_id: int):
 
 
 def validar_negocio_existe(db: Session, id_negocio: int):
-    negocio = db.query(Negocio).filter(Negocio.id_negocio == id_negocio).first()
+    negocio = db.query(Negocio).filter(
+        Negocio.id_negocio == id_negocio).first()
     if not negocio:
         raise HTTPException(status_code=404, detail="Negocio no encontrado")
     return negocio
