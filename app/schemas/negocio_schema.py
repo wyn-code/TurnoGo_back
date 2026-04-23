@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Optional, List
 from pydantic import BaseModel, ConfigDict, Field
 
+
 from app.schemas.servicio_schema import ServicioCreate, ServicioResponse
 from app.schemas.empleado_schema import EmpleadoCreate, EmpleadoResponse
 
@@ -22,8 +23,10 @@ class NegocioBase(BaseModel):
     activo: bool = True
 
 
+
 class NegocioCreate(NegocioBase):
     usuario_id: int
+    id_categoria: int
 
 
 class NegocioResponse(NegocioBase):
@@ -31,13 +34,15 @@ class NegocioResponse(NegocioBase):
     creado_at: datetime
     usuario_id: Optional[int] = None
     slug: Optional[str] = None
-    categoria: Optional[CategoriaResponse] = None
+
     model_config = ConfigDict(from_attributes=True)
+
 
 
 class NegocioCompleteCreate(NegocioCreate):
     servicios: List[ServicioCreate] = Field(default_factory=list)
     empleados: List[EmpleadoCreate] = Field(default_factory=list)
+
 
 
 class NegocioCompleteResponse(NegocioResponse):

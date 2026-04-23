@@ -181,25 +181,27 @@ def crear_negocio_completo(db: Session, data: NegocioCompleteCreate):
 
         # 🔥 Servicios
         for servicio in data.servicios:
-            db.add(Servicio(
-                id_negocio=nuevo_negocio.id_negocio,
+            nuevo_servicio = Servicio(
                 nombre_servicio=servicio.nombre_servicio,
                 precio=servicio.precio,
                 requiere_aprobacion=servicio.requiere_aprobacion,
                 duracion_min=servicio.duracion_min,
                 duracion_max=servicio.duracion_max,
                 activo=servicio.activo,
-            ))
+                id_negocio=nuevo_negocio.id_negocio 
+            )
+            db.add(nuevo_servicio)
 
         # 🔥 Empleados
         for empleado in data.empleados:
-            db.add(Empleado(
-                id_negocio=nuevo_negocio.id_negocio,
+            nuevo_empleado = Empleado(
                 nombre=empleado.nombre,
                 apellido=empleado.apellido,
                 telefono=empleado.telefono,
                 activo=empleado.activo,
-            ))
+                id_negocio=nuevo_negocio.id_negocio 
+            )
+            db.add(nuevo_empleado)
 
         db.commit()
         db.refresh(nuevo_negocio)

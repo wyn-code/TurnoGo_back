@@ -1,17 +1,21 @@
+from typing import Optional
 from pydantic import BaseModel, ConfigDict
+
 
 
 class EmpleadoBase(BaseModel):
     nombre: str
     apellido: str
-    telefono: str
-    activo: bool = True  # 👈 le damos default por si no viene
+    telefono: Optional[str] = None
+    activo: bool = True
 
 
 class EmpleadoCreate(EmpleadoBase):
-    pass
+    pass  # ❌ NO id_negocio
 
 
 class EmpleadoResponse(EmpleadoBase):
     id_empleado: int
+    id_negocio: int
+
     model_config = ConfigDict(from_attributes=True)

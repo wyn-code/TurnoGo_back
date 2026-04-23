@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic import BaseModel, ConfigDict
 
 
@@ -11,10 +12,11 @@ class ServicioBase(BaseModel):
 
 
 class ServicioCreate(ServicioBase):
-    pass
+    pass  # ❌ NO id_negocio
 
 
 class ServicioResponse(ServicioBase):
     id_servicio: int
     id_negocio: int
+
     model_config = ConfigDict(from_attributes=True)

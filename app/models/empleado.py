@@ -8,12 +8,11 @@ class Empleado(Base):
     __tablename__ = "empleado"
 
     id_empleado = Column(Integer, primary_key=True, index=True)
-    id_negocio = Column(Integer, ForeignKey("negocio.id_negocio"), nullable=False)
-
     nombre = Column(String(30), nullable=False)
     apellido = Column(String(30), nullable=False)
-    telefono = Column(String(30), unique=True, nullable=False)
+    telefono = Column(String(30), unique=True, nullable=True)
     activo = Column(Boolean, nullable=False)
 
+    id_negocio = Column(Integer, ForeignKey("negocio.id_negocio"), nullable=False)
     negocio = relationship("Negocio", back_populates="empleados")
     turnos = relationship("Turno", back_populates="empleado")
