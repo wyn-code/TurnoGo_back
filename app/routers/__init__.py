@@ -6,4 +6,5 @@ from . import (
     servicio_router,
     turno_router,
     usuario,
+    horarios_negocio_router
 )
