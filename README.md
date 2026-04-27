@@ -39,11 +39,11 @@ Aplicación web full stack para la gestión de turnos, desarrollada como proyect
 ## 📸 Capturas de pantalla
 
 | Vista principal |
-|---|---|
+
 ![Gestión de turnos](./screenshot/crearNegocio.png)
 
 | Gestión de turnos |
-|---|---|
+
 ![Gestión de turnos](./screenshot/Captura%20de%20pantalla%202026-04-27%20150251.png)
 
 
