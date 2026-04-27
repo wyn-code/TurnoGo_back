@@ -34,7 +34,7 @@ class NegocioResponse(NegocioBase):
     creado_at: datetime
     usuario_id: Optional[int] = None
     slug: Optional[str] = None
-
+    categoria: Optional[CategoriaResponse] = None 
     model_config = ConfigDict(from_attributes=True)
 
 
