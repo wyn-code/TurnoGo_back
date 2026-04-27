@@ -9,110 +9,67 @@ Aplicación web full stack para la gestión de turnos, desarrollada como proyect
 ## 🚀 Tecnologías utilizadas
 
 **Frontend**
-- React (gestión de estado y componentes)
-- JavaScript / HTML / CSS
+- React.js & TypeScript
+- Gestión de estado y Hooks
+- CSS Moderno / Tailwind (si aplica)
 
 **Backend**
 - Python 3
-- FastAPI (API REST)
+- FastAPI (Framework de alto rendimiento)
+- SQLAlchemy (ORM)
+- Pydantic (Validación de datos)
 
-**Base de datos**
-- SQL Server (diseño relacional, consultas optimizadas)
-
-**Herramientas**
+**Base de datos & Infraestructura**
+- SQL Server / Supabase
+- Docker & Docker Compose
 - Git / GitHub
-- VS Code
 
 ---
 
 ## ✨ Funcionalidades principales
 
-- Registro y autenticación de usuarios
-- Gestión de turnos: creación, modificación y cancelación
-- Validaciones de negocio (conflictos de horario, disponibilidad)
-- Flujos de estado de turnos (pendiente → confirmado → cancelado)
-- API REST documentada con FastAPI / Swagger
-- Diseño de base de datos relacional normalizada
+- **Gestión de Usuarios:** Registro, login y perfiles.
+- **Gestión de Turnos:** Creación, modificación y cancelación con validación de disponibilidad.
+- **Negocios:** Registro de establecimientos y configuración de servicios.
+- **API Documentada:** Documentación interactiva completa con Swagger UI.
+- **Validaciones:** Lógica de negocio para evitar solapamiento de horarios.
 
 ---
 
 ## 📸 Capturas de pantalla
 
-| Vista principal |
+| Vista de Negocio | Gestión de Turnos |
+|---|---|
+| ![Negocio](./screenshot/crearNegocio.png) | ![Turnos](./screenshot/dashboard.png) |
 
-![Gestión de turnos](./screenshot/crearNegocio.png)
-
-| Gestión de turnos |
-
-![Gestión de turnos](./screenshot/Captura%20de%20pantalla%202026-04-27%20150251.png)
-
-
-## ⚙️ Cómo correr el proyecto localmente
-
-### Requisitos previos
-- Python 3.10+
-- Node.js 18+
-- SQL Server (o instancia local)
-
-### Backend
-
-```bash
-# Clonar el repositorio
-git clone https://github.com/tu-usuario/sistema-turnos-saas.git
-cd sistema-turnos-saas/backend
-
-# Crear entorno virtual
-python -m venv venv
-source venv/bin/activate  # En Windows: venv\Scripts\activate
-
-# Instalar dependencias
-pip install -r requirements.txt
-
-# Configurar variables de entorno
-cp .env.example .env
-# Editá .env con tu cadena de conexión a SQL Server
-
-# Correr el servidor
-uvicorn main:app --reload
-```
-
-La API estará disponible en `http://localhost:8000`  
-Documentación Swagger: `http://localhost:8000/docs`
-
-### Frontend
-
-```bash
-cd ../frontend
-
-# Instalar dependencias
-npm install
-
-# Correr la app
-npm run dev
-```
-
-La app estará disponible en `http://localhost:5173`
+> **Nota:** Para asegurar que las imágenes se vean, evitá espacios en los nombres de archivos. Renombrá la captura de la lista de turnos a algo como `dashboard-lista.png`.
 
 ---
 
 ## 🗂️ Estructura del proyecto
 
+### 🖥️ Backend (FastAPI)
 ```
-sistema-turnos-saas/
-├── backend/
-│   ├── main.py
-│   ├── routers/
-│   ├── models/
-│   ├── schemas/
-│   ├── database.py
-│   └── requirements.txt
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   ├── pages/
-│   │   └── App.jsx
-│   └── package.json
-└── README.md
+app/
+├── core/           # Configuración, seguridad y constantes
+├── db/             # Sesión de base de datos y conexión
+├── models/         # Modelos de la base de datos (SQLAlchemy)
+├── routers/        # Definición de rutas y endpoints
+├── schemas/        # Modelos de datos para validación (Pydantic)
+├── services/       # Lógica de negocio y servicios externos
+└── main.py         # Punto de entrada de la aplicación
+```
+
+### 🎨 Frontend (React + TS)
+```
+src/
+├── api/            # Configuración de Axios/Fetch
+├── components/     # Componentes de UI reutilizables
+├── contexts/       # Manejo de estados globales
+├── hooks/          # Lógica de componentes extraída
+├── pages/          # Vistas principales de la app
+├── services/       # Integración con el backend
+└── types/          # Definiciones de interfaces TypeScript
 ```
 
 ## 📖 API — Endpoints principales
@@ -131,21 +88,18 @@ sistema-turnos-saas/
 
 ## 👤 Autor
 
-**Rocco Lavecchia**  
-Full Stack Developer — React + FastAPI | Python & SQL
+Rocco Lavecchia Full Stack Developer
 
 - 📧 roccolavecchia.rl@gmail.com  
 - 💼 [LinkedIn](https://www.linkedin.com/in/rocco-lavecchia-58089917a/)  
 - 🐙 [GitHub]([https://github.com/tu-usuario](https://github.com/lavecchiarocco))
 
+Bruno Massoco Full Stack Developer
 
-**Bruno Massoco**  
-Developer FullStack - JavaScript - C# - SQL - NodeJs - React - Nextjs
 - 📧 brunoo6.massocco@gmail.com
 - 💼 [LinkedIn](linkedin.com/in/bruno-massocco-49b113307/)  
 - 🐙 [GitHub]([https://github.com/tu-usuario](https://github.com/wyn-code))
 
 
-## 📄 Licencia
-
-Este proyecto fue desarrollado con fines educativos como proyecto final de carrera en la UTN.
+📄 Licencia
+Este proyecto fue desarrollado con fines educativos para la UTN.
