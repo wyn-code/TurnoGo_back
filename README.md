@@ -2,7 +2,7 @@
 
 Aplicación web full stack para la gestión de turnos, desarrollada como proyecto final de la Tecnicatura Universitaria en Programación (UTN).
 
-**C:\Users\lavec\dev\Turnexo\Turnexo\screenshot\Captura de pantalla 2026-04-27 142927.png**
+![Dashboard del Sistema](./screenshot/nombre-de-tu-archivo.png)
 
 ---
 
