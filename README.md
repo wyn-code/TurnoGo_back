@@ -42,7 +42,6 @@ Aplicación web full stack para la gestión de turnos, desarrollada como proyect
 |---|---|
 | ![Negocio](./screenshot/crearNegocio.png) | ![Turnos](./screenshot/dashboard.png) |
 
-> **Nota:** Para asegurar que las imágenes se vean, evitá espacios en los nombres de archivos. Renombrá la captura de la lista de turnos a algo como `dashboard-lista.png`.
 
 ---
 
