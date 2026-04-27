@@ -40,11 +40,8 @@ Aplicación web full stack para la gestión de turnos, desarrollada como proyect
 
 | Vista principal | Gestión de turnos |
 |---|---|
-| ![Screenshot 1](./screenshots/screenshot1.png) | ![Screenshot 2](./screenshots/screenshot2.png) |
+![Gestión de turnos](./screenshot/crearNegocio.png)
 
-> _Agregá tus capturas en una carpeta `/screenshots` dentro del repositorio_
-
----
 
 ## ⚙️ Cómo correr el proyecto localmente
 
@@ -114,20 +111,17 @@ sistema-turnos-saas/
 └── README.md
 ```
 
-> _Ajustá esta estructura según cómo esté organizado tu proyecto real_
-
----
-
 ## 📖 API — Endpoints principales
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| POST | `/auth/register` | Registro de usuario |
-| POST | `/auth/login` | Login y obtención de token |
-| GET | `/turnos` | Listar turnos del usuario |
-| POST | `/turnos` | Crear nuevo turno |
-| PUT | `/turnos/{id}` | Modificar turno |
-| DELETE | `/turnos/{id}` | Cancelar turno |
+| POST | `/api/usuarios` | Registro de usuario |
+| POST | `/api/auth/login` | Login y obtención de token |
+| GET | `/api/turnos` | Listar turnos del usuario |
+| POST | `/api/turnos` | Crear nuevo turno |
+| PUT | `/api/turnos/{turnos_id}` | Modificar turno |
+| DELETE | `/api/turnos/{turnos_id}` | Cancelar turno |
+| POST | `/api/negocio/complete` | Crear negocio |
 
 ---
 
@@ -138,9 +132,15 @@ Full Stack Developer — React + FastAPI | Python & SQL
 
 - 📧 roccolavecchia.rl@gmail.com  
 - 💼 [LinkedIn](https://www.linkedin.com/in/rocco-lavecchia-58089917a/)  
-- 🐙 [GitHub](https://github.com/tu-usuario)
+- 🐙 [GitHub]([https://github.com/tu-usuario](https://github.com/lavecchiarocco))
 
----
+
+**Bruno Massoco**  
+Developer FullStack - JavaScript - C# - SQL - NodeJs - React - Nextjs
+- 📧 brunoo6.massocco@gmail.com
+- 💼 [LinkedIn](linkedin.com/in/bruno-massocco-49b113307/)  
+- 🐙 [GitHub]([https://github.com/tu-usuario](https://github.com/wyn-code))
+
 
 ## 📄 Licencia
 
