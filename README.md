@@ -2,7 +2,7 @@
 
 Aplicación web full stack para la gestión de turnos, desarrollada como proyecto final de la Tecnicatura Universitaria en Programación (UTN).
 
-![Dashboard del Sistema](./dashboard.png)
+![Dashboard del Sistema](./screenshot/dashboard.png)
 
 ---
 
