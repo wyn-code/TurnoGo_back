@@ -24,3 +24,4 @@ class Turno(Base):
     cliente = relationship("Cliente", back_populates="turnos")
     empleado = relationship("Empleado", back_populates="turnos")
     servicio = relationship("Servicio", back_populates="turnos")
+    estado = relationship("EstadoTurno")

@@ -39,17 +39,45 @@ class TurnoActualizar(BaseModel):
         _validar_rango_horario(self.fecha_hora_inicio, self.fecha_hora_fin)
         return self
 
+class ClienteSimple(BaseModel):
+    id_cliente: int
+    nombre: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class EmpleadoSimple(BaseModel):
+    id_empleado: int
+    nombre: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+class ServicioSimple(BaseModel):
+    id_servicio: int
+    nombre_servicio: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class EstadoSimple(BaseModel):
+    id_estado: int
+    nombre_estado: str
+
+    model_config = ConfigDict(from_attributes=True)
 
 class TurnoResponse(BaseModel):
     id_turno: int
     id_negocio: int
-    id_cliente: int
-    id_servicio: int
-    id_estado: int
-    id_empleado: Optional[int] = None
+
     fecha_hora_inicio: datetime
     fecha_hora_fin: Optional[datetime] = None
     rechazado_motivo: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+
+    cliente: ClienteSimple
+    empleado: Optional[EmpleadoSimple] = None
+    servicio: ServicioSimple
+    estado: EstadoSimple
+
     model_config = ConfigDict(from_attributes=True)
