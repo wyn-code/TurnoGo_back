@@ -1,5 +1,5 @@
 from datetime import timedelta
-
+import re
 from fastapi import HTTPException, status
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
@@ -10,6 +10,10 @@ from app.models.negocio import Negocio
 from app.models.usuario import Usuario
 from app.schemas.auth_schema import LoginRequest, RegisterRequest, TokenResponse
 
+PASSWORD_REGEX = (
+    r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)"
+    r"(?=.*[@$!%*?&.#_-])[A-Za-z\d@$!%*?&.#_-]{12,16}$"
+)
 
 def register_user(db: Session, data: RegisterRequest) -> Usuario:
     existing_user = (
@@ -29,6 +33,16 @@ def register_user(db: Session, data: RegisterRequest) -> Usuario:
             detail="El email o nombre de usuario ya existe",
         )
 
+    if not re.match(PASSWORD_REGEX, data.contrasena_us):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "La contraseña debe tener entre 12 y 16 caracteres, "
+                "incluyendo al menos una mayúscula, una minúscula, "
+                "un número y un carácter especial."
+            ),
+        )
+
     usuario = Usuario(
         usuario_us=data.usuario_us.strip(),
         email_us=data.email_us.strip(),
@@ -42,7 +56,16 @@ def register_user(db: Session, data: RegisterRequest) -> Usuario:
 
 
 def login_user(db: Session, data: LoginRequest) -> tuple[Usuario, TokenResponse]:
-    usuario = db.query(Usuario).filter(Usuario.email_us == data.email_us).first()
+    usuario = (
+        db.query(Usuario)
+        .filter(
+            or_(
+                Usuario.email_us == data.email_us,
+                Usuario.usuario_us == data.email_us,
+            )
+        )
+        .first()
+    )
 
     if not usuario:
         raise HTTPException(

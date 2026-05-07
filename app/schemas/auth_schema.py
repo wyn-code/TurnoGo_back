@@ -10,7 +10,7 @@ class RegisterRequest(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    email_us: EmailStr
+    email_us: str
     contrasena_us: str = Field(min_length=6, max_length=128)
 
 
