@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, HTTPException # <-- Agrega HTTPException
 from sqlalchemy.orm import Session
-
+from app.core.dependencies import get_current_user
+from app.models.usuario import Usuario
+from app.models.negocio import Negocio
 from app.db.session import get_db
 from app.schemas.servicio_schema import ServicioCreate, ServicioResponse
 from app.services.servicio_service import (
@@ -17,8 +19,20 @@ def listar_servicios(db: Session = Depends(get_db)):
     return listar_servicios_service(db)
 
 
-@router.post("/", response_model=ServicioResponse, status_code=status.HTTP_201_CREATED)
-def crear_servicio(data: ServicioCreate, db: Session = Depends(get_db)):
+@router.post("/") 
+def crear_servicio(
+    data: ServicioCreate, 
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user) 
+    ):
+    negocio = db.query(Negocio).filter(Negocio.id_negocio == data.id_negocio).first()
+
+    if not negocio:
+        raise HTTPException(status_code=404, detail="Negocio no encontrado")
+        
+    if negocio.usuario_id != current_user.id_us:
+        raise HTTPException(status_code=403, detail="No tienes permisos para agregar servicios a este negocio")
+        
     return crear_servicio_service(db, data)
 
 

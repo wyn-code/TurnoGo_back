@@ -1,3 +1,6 @@
+from pydantic import BaseModel, ConfigDict
+
+
 class EstadoSimple(BaseModel):
     id_estado: int
     nombre_estado: str

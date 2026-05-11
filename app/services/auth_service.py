@@ -66,6 +66,7 @@ def login_user(db: Session, data: LoginRequest) -> tuple[Usuario, TokenResponse]
         )
         .first()
     )
+    usuarios = db.query(Usuario).all()
 
     if not usuario:
         raise HTTPException(

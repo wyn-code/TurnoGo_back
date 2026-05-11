@@ -19,7 +19,6 @@ def test_traer_negocio_inexistente_por_slug(client):
 def test_crear_negocio(client, seed_data):
     data = {
         "nombre": "Barberia Rocco",
-        "rubro": "Barberia",
         "wsp": "3364000000",
         "telefono": "3364000000",
         "direccion": "Mitre 123",
@@ -35,7 +34,6 @@ def test_crear_negocio(client, seed_data):
 
     body = response.json()
     assert body["nombre"] == data["nombre"]
-    assert body["rubro"] == data["rubro"]
     assert body["wsp"] == data["wsp"]
     assert body["telefono"] == data["telefono"]
     assert body["direccion"] == data["direccion"]
@@ -46,7 +44,6 @@ def test_crear_negocio(client, seed_data):
 def test_listar_negocios_con_un_registro(client, seed_data):
     data = {
         "nombre": "Negocio Test",
-        "rubro": "Peluqueria",
         "wsp": "3364111111",
         "telefono": "3364111111",
         "direccion": "Belgrano 456",
@@ -71,7 +68,6 @@ def test_listar_negocios_con_un_registro(client, seed_data):
 def test_traer_negocio_por_id(client, seed_data):
     data = {
         "nombre": "Negocio ID Test",
-        "rubro": "Barberia",
         "wsp": "3364222222",
         "telefono": "3364222222",
         "direccion": "Test 123",
@@ -99,7 +95,6 @@ def test_traer_negocio_por_id(client, seed_data):
 def test_traer_negocio_por_slug(client, seed_data):
     data = {
         "nombre": "Negocio Slug Test",
-        "rubro": "Barberia",
         "wsp": "3364333333",
         "telefono": "3364333333",
         "direccion": "Slug 123",

@@ -3,17 +3,20 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
-from app.main import app
+from app.main import app, create_app
 from app.db.base import Base
-from app.db.session import get_db
+from app.core.dependencies import get_db as get_db_core
+from app.db.session import get_db as get_db_session
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
+SQLALCHEMY_DATABASE_URL = "sqlite://"
+
+from sqlalchemy.pool import StaticPool
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
     connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
 )
-
 @event.listens_for(engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor = dbapi_connection.cursor()
@@ -26,7 +29,7 @@ TestingSessionLocal = sessionmaker(
     bind=engine,
 )
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture()
 def setup_db():
     from app.models.negocio import Negocio
     from app.models.cliente import Cliente
@@ -46,31 +49,32 @@ def setup_db():
 
 
 @pytest.fixture()
-def db():
-    connection = engine.connect()
-    transaction = connection.begin()
-    session = TestingSessionLocal(bind=connection)
+def db(setup_db): 
+    session = TestingSessionLocal()
 
     try:
         yield session
     finally:
+        session.rollback()
         session.close()
-        transaction.rollback()
-        connection.close()
 
+
+from app.main import app 
+from app.core.dependencies import get_db
 
 @pytest.fixture()
 def client(db):
     def override_get_db():
         yield db
 
-    app.dependency_overrides[get_db] = override_get_db
+    # Sobrescribimos AMBAS rutas posibles para asegurarnos de que atrape todo
+    app.dependency_overrides[get_db_core] = override_get_db
+    app.dependency_overrides[get_db_session] = override_get_db
 
     with TestClient(app) as test_client:
         yield test_client
-
+        
     app.dependency_overrides.clear()
-
 
 @pytest.fixture()
 def seed_data(db):
@@ -79,40 +83,45 @@ def seed_data(db):
     from app.models.empleado import Empleado
     from app.models.usuario import Usuario
     from app.models.categoria import Categoria
+    from app.models.estado_turno import EstadoTurno
+    from app.core.security import get_password_hash
 
     usuario_1 = Usuario(
         id_us=1,
         usuario_us="testuser1",
         email_us="test1@test.com",
-        contrasena_us="123456"
+        contrasena_us=get_password_hash("123456")
     )
+
     usuario_2 = Usuario(
         id_us=2,
         usuario_us="testuser2",
         email_us="test2@test.com",
-        contrasena_us="123456"
+        contrasena_us=get_password_hash("123456")
     )
-    db.add_all([usuario_1, usuario_2])
-    db.flush()
 
-    categoria_prueba = Categoria(
-        nombre="Categoría Test"
-    )
+    db.add_all([usuario_1, usuario_2])
+    # Puedes usar flush aquí si necesitas los IDs generados antes del commit final
+    db.flush() 
+
+    categoria_prueba = Categoria(nombre="Categoría Test")
     db.add(categoria_prueba)
     db.flush()
 
+    estado_pendiente = EstadoTurno(id_estado=1, nombre_estado="Pendiente")
+    db.add(estado_pendiente)
+    db.flush()
 
     negocio = Negocio(
         id_negocio=1,
         usuario_id=1,
         nombre="Test Negocio",
-        rubro="Barberia",
+        id_categoria = 1,
         wsp="123456789",
         direccion="Test 123",
         ciudad="San Nicolas",
         activo=True,
         slug="test-negocio",
-        id_categoria = 1,
     )
     db.add(negocio)
     db.flush()
@@ -139,7 +148,10 @@ def seed_data(db):
         activo=True,
     )
     db.add(empleado)
-    db.flush()
+    
+    # --- LA CORRECCIÓN ESTÁ AQUÍ ---
+    db.commit() 
+    # -------------------------------
 
     return {
         "usuario_1": usuario_1,
@@ -147,4 +159,5 @@ def seed_data(db):
         "negocio": negocio,
         "servicio": servicio,
         "empleado": empleado,
+        "estado_pendiente": estado_pendiente
     }

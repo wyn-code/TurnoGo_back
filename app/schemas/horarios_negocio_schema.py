@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import time
 
 class HorarioNegocioCreate(BaseModel):
@@ -11,5 +11,4 @@ class HorarioNegocioResponse(HorarioNegocioCreate):
     id_horarios_negocio: int
     id_negocio: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

@@ -1,46 +1,106 @@
-from datetime import datetime, timedelta
+import pytest   
+from fastapi.testclient import TestClient
 
+# 1. DUEÑO PUEDE EDITAR SU NEGOCIO (Este estaba bien)
+def test_owner_puede_editar_su_negocio(client, seed_data):
+    from .auth import obtener_token
 
-def crear_cliente(client, telefono):
-    res = client.post(
-        "/api/clientes/get-or-create",
-        json={
-            "telefono": telefono,
-            "nombre": "Rocco",
-            "apellido": "Lavecchia",
-        },
+    # Usamos test1 porque ES el dueño (usuario_id=1)
+    headers = obtener_token(
+        client,
+        "test1@test.com",
+        "123456"
     )
-    assert res.status_code == 200
-    return res.json()
 
-
-def test_turno_superposicion(client, seed_data):
-    cliente = crear_cliente(client, "3364000000")
-
-    inicio = datetime(2026, 4, 20, 10, 0, 0)
-
-    payload_1 = {
-        "id_negocio": 1,
-        "id_cliente": cliente["id_cliente"],
-        "id_servicio": 1,
-        "id_empleado": 1,
-        "fecha_hora_inicio": inicio.isoformat(),
+    payload = {
+        "nombre": "Negocio Editado"
     }
 
-    # Crear primer turno
-    res_1 = client.post("/api/turnos/", json=payload_1)
-    assert res_1.status_code == 201
+    response = client.put(
+        f"/api/negocios/{seed_data['negocio'].id_negocio}",
+        json=payload,
+        headers=headers
+    )
 
-    # Intentar superposición
-    payload_2 = {
-        "id_negocio": 1,
-        "id_cliente": cliente["id_cliente"],
-        "id_servicio": 1,
-        "id_empleado": 1,
-        "fecha_hora_inicio": (inicio + timedelta(minutes=15)).isoformat(),
+    assert response.status_code == 200
+    body = response.json()
+    assert body["nombre"] == "Negocio Editado"
+
+
+# 2. DUEÑO NO PUEDE EDITAR NEGOCIO AJENO
+def test_owner_no_puede_editar_negocio_ajeno(client, seed_data):
+    from .auth import obtener_token
+
+    # Usamos test2 porque NO es el dueño
+    headers = obtener_token(
+        client,
+        "test2@test.com", 
+        "123456"
+    )
+    payload = {
+        "nombre": "Negocio Hackeado" 
     }
+    response = client.put(
+        f"/api/negocios/{seed_data['negocio'].id_negocio}",
+        json=payload,
+        headers=headers
+    )
+    assert response.status_code == 403
 
-    res_2 = client.post("/api/turnos/", json=payload_2)
 
-    assert res_2.status_code == 409
-    assert "turno" in res_2.json()["detail"].lower()
+# 3. NO PUEDE BORRAR NEGOCIO AJENO
+def test_owner_no_puede_borrar_negocio_ajeno(client, seed_data):
+    from .auth import obtener_token
+
+    # Usamos test2
+    headers = obtener_token(
+        client,
+        "test2@test.com",
+        "123456"
+    )
+    response = client.delete(
+        f"/api/negocios/{seed_data['negocio'].id_negocio}",
+        headers=headers
+    )
+    assert response.status_code == 403
+
+
+# 4. NO PUEDE CREAR SERVICIO EN NEGOCIO AJENO
+def test_owner_no_puede_crear_servicio_en_negocio_ajeno(client, seed_data):
+    from .auth import obtener_token
+
+    # Usamos test2
+    headers = obtener_token(
+        client,
+        "test2@test.com",
+        "123456"
+    )
+    payload = {
+        "nombre": "Servicio Test",
+        "duracion_minutos": 60,
+        "precio": 1000,
+        "id_negocio": seed_data["negocio"].id_negocio
+    }
+    response = client.post(
+        "/api/servicios/",
+        json=payload,
+        headers=headers
+    )
+    assert response.status_code == 403
+
+
+# 5. NO PUEDE ACCEDER DASHBOARD PRIVADO AJENO
+def test_owner_no_puede_acceder_dashboard_privado_ajeno(client, seed_data):
+    from .auth import obtener_token
+
+    # Usamos test2
+    headers = obtener_token(
+        client,
+        "test2@test.com",
+        "123456"
+    )
+    response = client.get(
+        f"/api/negocios/{seed_data['negocio'].id_negocio}/dashboard",
+        headers=headers
+    )
+    assert response.status_code == 403

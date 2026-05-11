@@ -3,6 +3,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.categoria import Categoria
+from app.core.dependencies import get_current_user, get_db
+from app.models.usuario import Usuario
 from app.schemas.negocio_schema import (
     NegocioCreate,
     NegocioResponse,
@@ -49,7 +51,6 @@ def ver_negocio_por_id(negocio_id: int, db: Session = Depends(get_db)):
 
 @router.post("/", response_model=NegocioResponse, status_code=status.HTTP_201_CREATED)
 def post_negocio(data: NegocioCreate, db: Session = Depends(get_db)):
-    # Debug opcional
     print(data.model_dump())
 
     if data.id_categoria is None:
@@ -67,20 +68,29 @@ def post_negocio_completo(data: NegocioCompleteCreate, db: Session = Depends(get
     return crear_negocio_completo(db, data)
 
 @router.put("/{negocio_id}", response_model=NegocioResponse)
-def update_negocio(negocio_id: int, data: NegocioCreate, db: Session = Depends(get_db)):
+def update_negocio(
+    negocio_id: int, 
+    data: NegocioCreate, 
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user) 
+):
     negocio = obtener_negocio_por_id(db, negocio_id)
 
     if not negocio:
         raise HTTPException(status_code=404, detail="Negocio no encontrado")
+
+    if negocio.usuario_id != current_user.id_us:
+        raise HTTPException(status_code=403, detail="No tienes permisos para editar este negocio")
 
     categoria = db.query(Categoria).filter(
         Categoria.id_categoria == data.id_categoria
     ).first()
 
     if not categoria:
-            raise HTTPException(status_code=400, detail="Categoría no válida")
+        raise HTTPException(status_code=400, detail="Categoría no válida")
+        
     for key, value in data.model_dump(exclude_unset=True).items():
-            setattr(negocio, key, value)
+        setattr(negocio, key, value)
 
     db.commit()
     db.refresh(negocio)
@@ -88,11 +98,18 @@ def update_negocio(negocio_id: int, data: NegocioCreate, db: Session = Depends(g
 
 
 @router.delete("/{negocio_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_negocio(negocio_id: int, db: Session = Depends(get_db)):
+def delete_negocio(
+    negocio_id: int, 
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user) 
+):
     negocio = obtener_negocio_por_id(db, negocio_id)
 
     if not negocio:
         raise HTTPException(status_code=404, detail="Negocio no encontrado")
+
+    if negocio.usuario_id != current_user.id_us:
+        raise HTTPException(status_code=403, detail="No tienes permisos para borrar este negocio")
 
     db.delete(negocio)
     db.commit()

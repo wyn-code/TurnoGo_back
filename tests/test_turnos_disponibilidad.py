@@ -29,10 +29,10 @@ def test_crear_turno_y_rechazar_superposicion(client: TestClient, seed_data):
     inicio = datetime(2026, 4, 20, 10, 0, 0)
 
     payload_1 = {
-        "id_negocio": 1,
+        "id_negocio": seed_data["negocio"].id_negocio,
         "id_cliente": cliente["id_cliente"],
-        "id_servicio": 1,
-        "id_empleado": 1,
+        "id_servicio": seed_data["servicio"].id_servicio,
+        "id_empleado": seed_data["empleado"].id_empleado,
         "fecha_hora_inicio": inicio.isoformat(),
     }
 
@@ -40,17 +40,17 @@ def test_crear_turno_y_rechazar_superposicion(client: TestClient, seed_data):
     assert res_1.status_code == 201, res_1.text
     turno_1 = res_1.json()
 
-    assert turno_1["id_negocio"] == 1
-    assert turno_1["id_cliente"] == cliente["id_cliente"]
-    assert turno_1["id_servicio"] == 1
-    assert turno_1["id_empleado"] == 1
+    assert turno_1["id_negocio"] == seed_data["negocio"].id_negocio
+    assert turno_1["cliente"]["id_cliente"] == cliente["id_cliente"]
+    assert turno_1["servicio"]["id_servicio"] == seed_data["servicio"].id_servicio
+    assert turno_1["empleado"]["id_empleado"] == seed_data["empleado"].id_empleado
     assert turno_1["fecha_hora_fin"] is not None
 
     payload_superpuesto = {
-        "id_negocio": 1,
+        "id_negocio": seed_data["negocio"].id_negocio,
         "id_cliente": cliente["id_cliente"],
-        "id_servicio": 1,
-        "id_empleado": 1,
+        "id_servicio": seed_data["servicio"].id_servicio,
+        "id_empleado": seed_data["empleado"].id_empleado,
         "fecha_hora_inicio": (inicio + timedelta(minutes=15)).isoformat(),
     }
 
@@ -66,21 +66,21 @@ def test_permite_turno_no_superpuesto(client: TestClient, seed_data):
     inicio_2 = datetime(2026, 4, 21, 10, 30, 0)
 
     payload_1 = {
-        "id_negocio": 1,
-        "id_cliente": cliente["id_cliente"],
-        "id_servicio": 1,
-        "id_empleado": 1,
-        "fecha_hora_inicio": inicio_1.isoformat(),
+    "id_negocio": seed_data["negocio"].id_negocio,
+    "id_cliente": cliente["id_cliente"],
+    "id_servicio": seed_data["servicio"].id_servicio,
+    "id_empleado": seed_data["empleado"].id_empleado,
+    "fecha_hora_inicio": inicio_1.isoformat(),
     }
 
     res_1 = client.post("/api/turnos/", json=payload_1)
     assert res_1.status_code == 201, res_1.text
 
     payload_2 = {
-        "id_negocio": 1,
+        "id_negocio": seed_data["negocio"].id_negocio,
         "id_cliente": cliente["id_cliente"],
-        "id_servicio": 1,
-        "id_empleado": 1,
+        "id_servicio": seed_data["servicio"].id_servicio,
+        "id_empleado": seed_data["empleado"].id_empleado,
         "fecha_hora_inicio": inicio_2.isoformat(),
     }
 
