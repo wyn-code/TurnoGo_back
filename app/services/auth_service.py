@@ -10,10 +10,7 @@ from app.models.negocio import Negocio
 from app.models.usuario import Usuario
 from app.schemas.auth_schema import LoginRequest, RegisterRequest, TokenResponse
 
-PASSWORD_REGEX = (
-    r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)"
-    r"(?=.*[@$!%*?&.#_-])[A-Za-z\d@$!%*?&.#_-]{12,16}$"
-)
+PASSWORD_REGEX = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{10,20}$"
 
 def register_user(db: Session, data: RegisterRequest) -> Usuario:
     existing_user = (
@@ -37,9 +34,9 @@ def register_user(db: Session, data: RegisterRequest) -> Usuario:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
-                "La contraseña debe tener entre 12 y 16 caracteres, "
+                "La contraseña debe tener entre 10 y 20 caracteres, "
                 "incluyendo al menos una mayúscula, una minúscula, "
-                "un número y un carácter especial."
+                "un número"
             ),
         )
 
@@ -67,7 +64,7 @@ def login_user(db: Session, data: LoginRequest) -> tuple[Usuario, TokenResponse]
         .first()
     )
     usuarios = db.query(Usuario).all()
-    
+
     if not usuario:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
