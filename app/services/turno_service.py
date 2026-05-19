@@ -1,12 +1,14 @@
 from datetime import UTC, datetime, timedelta
 
-from fastapi import HTTPException
+from fastapi import BackgroundTasks, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.models.cliente import Cliente
 from app.models.servicio import Servicio
 from app.models.turnos import Turno
 from app.schemas.appointment_schema import TurnoActualizar, TurnoCrear
+from app.services.whatsapp_service import enviar_whatsapp
 
 
 SOLAPAMIENTO_DETALLE = "El empleado ya tiene un turno en ese horario"
@@ -61,7 +63,7 @@ def hay_superposicion(
         return False
 
     query = db.query(Turno).filter(
-        Turno.id_negocio == id_negocio,   
+        Turno.id_negocio == id_negocio,
         Turno.id_empleado == id_empleado,
         Turno.fecha_hora_inicio < fin,
         Turno.fecha_hora_fin > inicio,
@@ -79,7 +81,7 @@ def _resolver_fecha_hora_fin(
     id_negocio: int,
     fecha_hora_inicio: datetime,
     fecha_hora_fin: datetime | None = None,
-    ) -> datetime:
+) -> datetime:
     """
     Si no viene fecha_hora_fin, la calcula usando duracion_min del servicio.
     Siempre valida que el servicio pertenezca al negocio.
@@ -118,7 +120,7 @@ def _lanzar_error_integridad(e: IntegrityError) -> None:
     ) from e
 
 
-def crear_turno(db: Session, turno: TurnoCrear):
+def crear_turno(db: Session, turno: TurnoCrear, background_tasks: BackgroundTasks):
     servicio = obtener_servicio_del_negocio(
         db=db,
         id_servicio=turno.id_servicio,
@@ -136,7 +138,7 @@ def crear_turno(db: Session, turno: TurnoCrear):
 
     if hay_superposicion(
         db=db,
-        id_negocio=turno.id_negocio,   
+        id_negocio=turno.id_negocio,
         id_empleado=turno.id_empleado,
         inicio=turno.fecha_hora_inicio,
         fin=fecha_hora_fin,
@@ -144,6 +146,15 @@ def crear_turno(db: Session, turno: TurnoCrear):
         raise HTTPException(
             status_code=409,
             detail=SOLAPAMIENTO_DETALLE,
+        )
+
+    # 1. Buscamos los datos del cliente para WhatsApp ANTES de crear el turno
+    cliente = db.query(Cliente).filter(
+        Cliente.id_cliente == turno.id_cliente).first()
+    if not cliente:
+        raise HTTPException(
+            status_code=444,  # O el código que manejes para recursos no encontrados
+            detail="El cliente especificado no existe."
         )
 
     ahora = datetime.now(UTC)
@@ -166,6 +177,23 @@ def crear_turno(db: Session, turno: TurnoCrear):
         db.add(nuevo_turno)
         db.commit()
         db.refresh(nuevo_turno)
+
+        # LO HACEMOS EN DIRECTO ACÁ EN EL SERVICE PARA DEPURAR
+        print("\n--- ENVIANDO PRUEBA DE WHATSAPP ---")
+
+        nombre_completo = f"{cliente.nombre} {cliente.apellido}"
+
+        # Mandamos strings fijos para asegurarnos de que no rompa por formato
+        resultado = enviar_whatsapp(
+            telefono=cliente.telefono,
+            nombre_cliente=nombre_completo,
+            fecha="19/05/2026",
+            hora="20:00"
+        )
+
+        print(f"Respuesta del servidor de Meta: {resultado}")
+        print("-----------------------------------\n")
+
         return nuevo_turno
 
     except IntegrityError as e:
@@ -275,7 +303,9 @@ def borrar_turno(db: Session, turno_id: int):
 
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Error al eliminar el turno: {str(e)}", )
+        raise HTTPException(
+            status_code=500, detail=f"Error al eliminar el turno: {str(e)}", )
+
 
 def listar_turnos_por_negocio_y_rango(
     db: Session,

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -58,8 +58,8 @@ def obtener(turno_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/", response_model=TurnoResponse, status_code=201)
-def crear(turno: TurnoCrear, db: Session = Depends(get_db)):
-    return crear_turno(db, turno)
+def crear(turno: TurnoCrear, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    return crear_turno(db, turno, background_tasks=background_tasks)
 
 
 @router.put("/{turno_id}", response_model=TurnoResponse)
