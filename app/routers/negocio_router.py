@@ -11,11 +11,13 @@ from app.schemas.negocio_schema import (
     NegocioCompleteCreate,
     NegocioCompleteResponse,
     NegocioAdminResponse,
+    NegocioUpdate,
 )
 from app.services.negocio_service import (
     listar_negocios,
     listar_negocios_admin,
     obtener_negocio_por_id,
+    obtener_negocio_publico_por_id,
     obtener_negocio_por_slug,
     crear_negocio,
     crear_negocio_completo,
@@ -47,11 +49,16 @@ def ver_negocio_por_slug(slug: str, db: Session = Depends(get_db)):
     return negocio
 
 
-@router.get("/{negocio_id}", response_model=NegocioResponse)
-def ver_negocio_por_id(negocio_id: int, db: Session = Depends(get_db)):
-    negocio = obtener_negocio_por_id(db, negocio_id)
-    if not negocio:
-        raise HTTPException(status_code=404, detail="Negocio no encontrado")
+@router.get("/{negocio_id}")
+def ver_negocio_por_id(
+    negocio_id: int,
+    db: Session = Depends(get_db)
+):
+    negocio = obtener_negocio_publico_por_id(
+        db,
+        negocio_id
+    )
+
     return negocio
 
 
@@ -76,20 +83,23 @@ def post_negocio_completo(data: NegocioCompleteCreate, db: Session = Depends(get
 @router.put("/{negocio_id}", response_model=NegocioResponse)
 def update_negocio(
     negocio_id: int,
-    data: NegocioCreate,
+    data: NegocioUpdate,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user)
 ):
-    negocio = obtener_negocio_por_id(db, negocio_id)
+    negocio = obtener_negocio_por_id(
+        db,
+        negocio_id
+    )
 
-    if not negocio:
-        raise HTTPException(
-            status_code=404,
-            detail="Negocio no encontrado"
-        )
+    es_admin = (
+        current_user.role == "admin"
+    )
 
-    es_admin = current_user.role == "admin"
-    es_duenio = negocio.usuario_id == current_user.id_us
+    es_duenio = (
+        negocio.usuario_id
+        == current_user.id_us
+    )
 
     if not es_admin and not es_duenio:
         raise HTTPException(
@@ -97,17 +107,23 @@ def update_negocio(
             detail="No tienes permisos para editar este negocio"
         )
 
-    categoria = db.query(Categoria).filter(
-        Categoria.id_categoria == data.id_categoria
-    ).first()
+    # ✅ Validar categoría SOLO si viene
+    if data.id_categoria is not None:
 
-    if not categoria:
-        raise HTTPException(
-            status_code=400,
-            detail="Categoría no válida"
-        )
+        categoria = db.query(Categoria).filter(
+            Categoria.id_categoria == data.id_categoria
+        ).first()
 
-    for key, value in data.model_dump(exclude_unset=True).items():
+        if not categoria:
+            raise HTTPException(
+                status_code=400,
+                detail="Categoría no válida"
+            )
+
+    # ✅ Actualizar solo campos enviados
+    for key, value in data.model_dump(
+        exclude_unset=True
+    ).items():
         setattr(negocio, key, value)
 
     db.commit()
@@ -122,7 +138,7 @@ def delete_negocio(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user)
 ):
-    if current_user.role != "aadmin":
+    if current_user.role != "admin":
         raise HTTPException(
             status_code=403,
             detail="Solo los administradores pueden eliminar negocios"

@@ -71,6 +71,16 @@ class NegocioCompleteResponse(
         Field(default_factory=list)
     )
 
+class NegocioUpdate(BaseModel):
+    nombre: str | None = None
+    wsp: str | None = None
+    telefono: str | None = None
+    direccion: str | None = None
+    ciudad: str | None = None
+    ig_url: str | None = None
+    activo: bool | None = None
+    id_categoria: int | None = None
+
 
 # =========================
 # ADMIN RESPONSE
@@ -81,14 +91,20 @@ class DuenioResponse(BaseModel):
     email: str
 
 
-class NegocioAdminResponse(BaseModel):
+class NegocioAdminResponse(
+    BaseModel
+):
     id_negocio: int
     nombre: str
-    categoria: str
+
+    wsp: str | None = None
+    telefono: str | None = None
+    direccion: str | None = None
+    ciudad: str | None = None
+    ig_url: str | None = None
+
+    categoria: str | None = None
     slug: str
     activo: bool
-    duenio: DuenioResponse
 
-    model_config = ConfigDict(
-        from_attributes=True
-    )
+    duenio: DuenioResponse

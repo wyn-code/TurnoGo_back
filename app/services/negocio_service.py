@@ -14,14 +14,19 @@ from app.schemas.negocio_schema import NegocioCreate, NegocioCompleteCreate
 
 
 def listar_negocios(db: Session):
-    return db.query(Negocio).all()
+    return db.query(Negocio).filter(
+        Negocio.activo == True
+    ).all()
 
 
 def listar_negocios_admin(db: Session):
     resultados = (
         db.query(Negocio, Usuario)
         .options(joinedload(Negocio.categoria))
-        .join(Usuario, Negocio.usuario_id == Usuario.id_us)
+        .join(
+            Usuario,
+            Negocio.usuario_id == Usuario.id_us
+        )
         .all()
     )
 
@@ -31,33 +36,78 @@ def listar_negocios_admin(db: Session):
         negocios.append({
             "id_negocio": negocio.id_negocio,
             "nombre": negocio.nombre,
-            "categoria": negocio.categoria.nombre if negocio.categoria else None,
+
+            "wsp": negocio.wsp,
+            "telefono": negocio.telefono,
+            "direccion": negocio.direccion,
+            "ciudad": negocio.ciudad,
+            "ig_url": negocio.ig_url,
+
+            "categoria":
+                negocio.categoria.nombre
+                if negocio.categoria
+                else None,
+
             "slug": negocio.slug,
             "activo": negocio.activo,
+
             "duenio": {
                 "nombre": usuario.usuario_us,
-                "email": usuario.email_us
-            }
+                "email": usuario.email_us,
+            },
         })
 
     return negocios
 
-
 def obtener_negocio_por_id(db: Session, negocio_id: int):
     negocio = db.query(Negocio).options(
         joinedload(Negocio.categoria)
-    ).filter(Negocio.id_negocio == negocio_id).first()
+    ).filter(
+        Negocio.id_negocio == negocio_id
+    ).first()
+
     if not negocio:
-        raise HTTPException(status_code=404, detail="Negocio no encontrado")
+        raise HTTPException(
+            status_code=404,
+            detail="Negocio no encontrado"
+        )
+
+    return negocio
+
+def obtener_negocio_publico_por_id(
+    db: Session,
+    negocio_id: int
+):
+    negocio = db.query(Negocio).options(
+        joinedload(Negocio.categoria)
+    ).filter(
+        Negocio.id_negocio == negocio_id,
+        Negocio.activo == True
+    ).first()
+
+    if not negocio:
+        raise HTTPException(
+            status_code=404,
+            detail="Negocio no encontrado"
+        )
+
     return negocio
 
 
 def obtener_negocio_por_slug(db: Session, slug: str):
     negocio = db.query(Negocio).options(
         joinedload(Negocio.categoria)
-    ).filter(Negocio.slug == slug).first()
+    ).filter(
+        Negocio.slug == slug,
+        Negocio.activo == True
+    ).first()
+
     if not negocio:
-        raise HTTPException(status_code=404, detail="Negocio no encontrado")
+        raise HTTPException(
+            status_code=404,
+            detail="Negocio no encontrado"
+        )
+
     return negocio
 
 
