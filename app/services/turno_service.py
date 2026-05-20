@@ -187,8 +187,9 @@ def crear_turno(db: Session, turno: TurnoCrear, background_tasks: BackgroundTask
         resultado = enviar_whatsapp(
             telefono=cliente.telefono,
             nombre_cliente=nombre_completo,
-            fecha="19/05/2026",
-            hora="20:00"
+            fecha=turno.fecha_hora_inicio.date(),
+            hora=turno.fecha_hora_inicio.time(),
+            nombre_negocio=servicio.negocio.nombre,
         )
 
         print(f"Respuesta del servidor de Meta: {resultado}")
