@@ -16,6 +16,5 @@ class Servicio(Base):
     duracion_max = Column(Integer, nullable=False)
     activo = Column(Boolean, nullable=False)
 
-    id_negocio = Column(Integer, ForeignKey("negocio.id_negocio"), nullable=False)
     negocio = relationship("Negocio", back_populates="servicios")
     turnos = relationship("Turno", back_populates="servicio")
