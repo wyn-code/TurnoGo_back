@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Optional, List
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.horarios_negocio_schema import HorarioNegocioCreate, HorarioNegocioResponse
 from app.schemas.servicio_schema import (
     ServicioCreate,
     ServicioResponse
@@ -36,13 +37,18 @@ class NegocioCreate(NegocioBase):
     id_categoria: int
 
 
+
 class NegocioResponse(NegocioBase):
     id_negocio: int
     creado_at: datetime
     usuario_id: Optional[int] = None
     slug: Optional[str] = None
     categoria: Optional[CategoriaResponse] = None
+    latitud: Optional[float] = None
+    longitud: Optional[float] = None
 
+    horarios: List[HorarioNegocioResponse] = Field(default_factory=list)
+ 
     model_config = ConfigDict(
         from_attributes=True
     )
@@ -51,25 +57,18 @@ class NegocioResponse(NegocioBase):
 class NegocioCompleteCreate(
     NegocioCreate
 ):
-    servicios: List[ServicioCreate] = (
-        Field(default_factory=list)
-    )
-
-    empleados: List[EmpleadoCreate] = (
-        Field(default_factory=list)
-    )
+    servicios: List[ServicioCreate] = (Field(default_factory=list))
+    empleados: List[EmpleadoCreate] = (Field(default_factory=list))
+    horarios: List[HorarioNegocioCreate] = Field(default_factory=list)
 
 
 class NegocioCompleteResponse(
     NegocioResponse
 ):
-    servicios: List[ServicioResponse] = (
-        Field(default_factory=list)
-    )
-
-    empleados: List[EmpleadoResponse] = (
-        Field(default_factory=list)
-    )
+    servicios: List[ServicioResponse] = (Field(default_factory=list))
+    empleados: List[EmpleadoResponse] = (Field(default_factory=list))
+    horarios: List[HorarioNegocioResponse] = Field(default_factory=list)
+    
 
 class NegocioUpdate(BaseModel):
     nombre: str | None = None
@@ -82,9 +81,6 @@ class NegocioUpdate(BaseModel):
     id_categoria: int | None = None
 
 
-# =========================
-# ADMIN RESPONSE
-# =========================
 
 class DuenioResponse(BaseModel):
     nombre: str
@@ -108,3 +104,13 @@ class NegocioAdminResponse(
     activo: bool
 
     duenio: DuenioResponse
+
+
+class NegocioMapaResponse(BaseModel):
+    id_negocio: int
+    nombre: str
+    latitud: Optional[float] = None
+    longitud: Optional[float] = None
+
+    class Config:
+        from_attributes = True

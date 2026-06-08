@@ -70,3 +70,4 @@ def actualizar(turno_id: int, datos: TurnoActualizar, db: Session = Depends(get_
 @router.delete("/{turno_id}", status_code=204)
 def borrar(turno_id: int, db: Session = Depends(get_db)):
     borrar_turno(db, turno_id)
+

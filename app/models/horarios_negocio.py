@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Time, Integer, ForeignKey
 from app.db.base import Base
+from sqlalchemy.orm import relationship
 
 class HorarioNegocio(Base):
     __tablename__ = "horarios_negocio"
@@ -9,3 +10,5 @@ class HorarioNegocio(Base):
     dia_semana = Column(Integer, nullable=False)
     hora_apertura = Column(Time, nullable=False)
     hora_cierre = Column(Time, nullable=False)
+
+    negocio = relationship("Negocio", back_populates="horarios")

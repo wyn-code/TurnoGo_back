@@ -1,9 +1,9 @@
 from fastapi import Request
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.db.session import get_db
 from app.models.categoria import Categoria
 from app.core.dependencies import get_current_user, get_db
+from app.models.negocio import Negocio
 from app.models.usuario import Usuario
 from app.schemas.negocio_schema import (
     NegocioCreate,
@@ -12,6 +12,7 @@ from app.schemas.negocio_schema import (
     NegocioCompleteResponse,
     NegocioAdminResponse,
     NegocioUpdate,
+    NegocioMapaResponse
 )
 from app.services.negocio_service import (
     listar_negocios,
@@ -25,6 +26,22 @@ from app.services.negocio_service import (
 
 router = APIRouter(prefix="/negocios", tags=["Negocios"])
 
+@router.get("/mapa", response_model=list[NegocioMapaResponse])
+def obtener_negocios_mapa(db: Session = Depends(get_db)):
+
+    return (
+        db.query(
+            Negocio.id_negocio,
+            Negocio.nombre,
+            Negocio.latitud,
+            Negocio.longitud,
+        )
+        .filter(
+            Negocio.latitud.isnot(None),
+            Negocio.longitud.isnot(None)
+        )
+        .all()
+)
 
 @router.get("/", response_model=list[NegocioResponse])
 def ver_negocios(db: Session = Depends(get_db)):
@@ -58,7 +75,6 @@ def ver_negocio_por_id(
         db,
         negocio_id
     )
-
     return negocio
 
 
@@ -156,3 +172,6 @@ def delete_negocio(
     db.commit()
 
     return None
+
+
+

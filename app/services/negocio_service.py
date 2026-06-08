@@ -1,16 +1,19 @@
 import re
-import unicodedata
+import logging
 from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
-
 from app.models.negocio import Negocio
 from app.models.usuario import Usuario
 from app.models.servicio import Servicio
 from app.models.empleado import Empleado
 from app.models.categoria import Categoria
-
+from app.services.mapbox_service import obtener_coordenadas
 from app.schemas.negocio_schema import NegocioCreate, NegocioCompleteCreate
+from app.models.horarios_negocio import HorarioNegocio
+
+
+logger = logging.getLogger(__name__)
 
 
 def listar_negocios(db: Session):
@@ -59,6 +62,7 @@ def listar_negocios_admin(db: Session):
 
     return negocios
 
+
 def obtener_negocio_por_id(db: Session, negocio_id: int):
     negocio = db.query(Negocio).options(
         joinedload(Negocio.categoria)
@@ -73,6 +77,7 @@ def obtener_negocio_por_id(db: Session, negocio_id: int):
         )
 
     return negocio
+
 
 def obtener_negocio_publico_por_id(
     db: Session,
@@ -96,7 +101,8 @@ def obtener_negocio_publico_por_id(
 
 def obtener_negocio_por_slug(db: Session, slug: str):
     negocio = db.query(Negocio).options(
-        joinedload(Negocio.categoria)
+        joinedload(Negocio.categoria),
+        joinedload(Negocio.horarios)
     ).filter(
         Negocio.slug == slug,
         Negocio.activo == True
@@ -107,7 +113,8 @@ def obtener_negocio_por_slug(db: Session, slug: str):
             status_code=404,
             detail="Negocio no encontrado"
         )
-
+    print("ID NEGOCIO:", negocio.id_negocio)
+    print("HORARIOS:", negocio.horarios)
     return negocio
 
 
@@ -204,7 +211,24 @@ def crear_negocio_completo(db: Session, data: NegocioCompleteCreate):
     if not categoria:
         raise HTTPException(status_code=400, detail="Categoría no válida")
 
-    # ❌ ELIMINAMOS LA VARIABLE rubro = categoria.nombre (ya no se usa)
+    latitud = None
+    longitud = None
+
+    try:
+        if data.direccion and data.ciudad:
+            latitud, longitud = obtener_coordenadas(
+                f"{data.direccion}, {data.ciudad}, Argentina"
+            )
+
+    except Exception:
+        logger.exception(
+            "Error obteniendo coordenadas desde Mapbox"
+        )
+
+    if latitud is not None and longitud is not None:
+        if latitud == 0 or longitud == 0:
+            latitud = None
+            longitud = None
 
     slug = generar_slug_unico(db, data.nombre)
 
@@ -223,11 +247,14 @@ def crear_negocio_completo(db: Session, data: NegocioCompleteCreate):
         activo=data.activo,
         id_categoria=data.id_categoria,  # 👈 Esto es lo que importa ahora
         slug=slug,
+
+        latitud=latitud,
+        longitud=longitud,
     )
 
     try:
         db.add(nuevo_negocio)
-        db.flush()  # 🔥 obtiene id_negocio sin commit
+        db.flush()
 
         # 🔥 Servicios
         for servicio in data.servicios:
@@ -238,7 +265,7 @@ def crear_negocio_completo(db: Session, data: NegocioCompleteCreate):
                 duracion_min=servicio.duracion_min,
                 duracion_max=servicio.duracion_max,
                 activo=servicio.activo,
-                id_negocio=nuevo_negocio.id_negocio 
+                id_negocio=nuevo_negocio.id_negocio
             )
             db.add(nuevo_servicio)
 
@@ -249,14 +276,34 @@ def crear_negocio_completo(db: Session, data: NegocioCompleteCreate):
                 apellido=empleado.apellido,
                 telefono=empleado.telefono,
                 activo=empleado.activo,
-                id_negocio=nuevo_negocio.id_negocio 
+                id_negocio=nuevo_negocio.id_negocio
             )
             db.add(nuevo_empleado)
 
+        print("HORARIOS RECIBIDOS:", data.horarios)
+        # Horarios
+        for horario in data.horarios:
+            nuevo_horario = HorarioNegocio(
+                id_negocio=nuevo_negocio.id_negocio,
+                dia_semana=horario.dia_semana,
+                hora_apertura=horario.hora_apertura,
+                hora_cierre=horario.hora_cierre,
+            )
+            db.add(nuevo_horario)
+
         db.commit()
         db.refresh(nuevo_negocio)
+
         return nuevo_negocio
 
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+
+        logger.exception(
+            f"Error creando negocio completo: {e}"
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail="Error al crear el negocio"
+        )

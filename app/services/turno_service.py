@@ -19,8 +19,10 @@ ESTADO_PENDIENTE_APROBACION = 2
 ESTADO_CONFIRMADO = 3
 
 
+
 def listar_turnos(db: Session):
     return db.query(Turno).all()
+
 
 
 def obtener_turno_por_id(db: Session, turno_id: int):
