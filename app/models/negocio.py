@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Float
 from sqlalchemy.orm import relationship
 from app.db.base import Base
 from datetime import datetime
@@ -22,9 +22,12 @@ class Negocio(Base):
     activo = Column(Boolean, default=True, nullable=False)
     creado_at = Column(DateTime, default=datetime.now, nullable=False)
     id_categoria = Column(Integer, ForeignKey("categorias.id_categoria"), nullable=False)
+    latitud = Column(Float, nullable=True)
+    longitud = Column(Float, nullable=True)
 
     turnos = relationship("Turno", back_populates="negocio")
     servicios = relationship("Servicio", back_populates="negocio", cascade="all, delete-orphan")
     empleados = relationship("Empleado", back_populates="negocio", cascade="all, delete-orphan")
     usuario = relationship("Usuario", back_populates="negocio")
     categoria = relationship("Categoria", back_populates="negocios")
+    horarios = relationship("HorarioNegocio", back_populates="negocio", cascade="all, delete-orphan")
