@@ -34,7 +34,6 @@ def _existe_email(db: Session, email_us: str, excluir_id: int | None = None):
 
 
 def crear_usuario(db: Session, usuario: UsuarioCreate):
-    print("ENTRO A CREAR_USUARIO")
 
     if _existe_usuario_us(db, usuario.usuario_us):
         raise HTTPException(

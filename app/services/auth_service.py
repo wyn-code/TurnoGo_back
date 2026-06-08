@@ -25,10 +25,16 @@ from app.schemas.auth_schema import (
 )
 
 
-PASSWORD_REGEX = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{10,20}$"
+PASSWORD_REGEX = (
+    r"^(?=.*[a-z])"
+    r"(?=.*[A-Z])"
+    r"(?=.*\d)"
+    r"(?=.*[@$!%*?&.#_-])"
+    r"[A-Za-z\d@$!%*?&.#_-]{12,16}$"
+)
 
 def register_user(db: Session, data: RegisterRequest) -> Usuario:
-    print("ENTRO A REGISTER_USER")
+    
     existing_user = (
         db.query(Usuario)
         .filter(
@@ -50,9 +56,9 @@ def register_user(db: Session, data: RegisterRequest) -> Usuario:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
-                "La contraseña debe tener entre 10 y 20 caracteres, "
+                "La contraseña debe tener entre 12 y 16 caracteres, "
                 "incluyendo al menos una mayúscula, una minúscula, "
-                "un número"
+                "un número y un carácter especial"
             ),
         )
 
