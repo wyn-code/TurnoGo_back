@@ -1,10 +1,17 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-
+from app.services.auth_service import (
+    login_user,
+    register_user,
+    build_me_response,
+)
+from fastapi import (
+    APIRouter,
+    Depends,
+)
 from app.core.dependencies import get_current_user, get_db
 from app.models.usuario import Usuario
 from app.schemas.auth_schema import AuthResponse, LoginRequest, RegisterRequest, TokenResponse
-from app.services.auth_service import login_user, register_user, build_me_response
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -28,10 +35,19 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     print("DB SESSION:", db)
     return token
 
-
 @router.get("/me")
 def me(
     current_user: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     return build_me_response(db, current_user)
+
+@router.get("/verify-email/{token}")
+def verify_email_route(
+    token: str,
+    db: Session = Depends(get_db),
+):
+    return verify_email(
+        db,
+        token,
+    )
