@@ -20,9 +20,10 @@ def create_app():
     app = FastAPI(title="Turnexo")
 
     origins = [
-        "http://localhost:5173",
-        "https://www.turnogo.app/"
-    ]
+    "http://localhost:5173",
+    "https://www.turnogo.app",
+    "https://turnogo.app",
+]
 
     app.add_middleware(
         CORSMiddleware,
