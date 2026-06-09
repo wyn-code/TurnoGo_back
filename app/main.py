@@ -21,7 +21,7 @@ def create_app():
 
     origins = [
         "http://localhost:5173",
-        "https://turnexo-front-c7bj.vercel.app"
+        "https://www.turnogo.app/"
     ]
 
     app.add_middleware(
