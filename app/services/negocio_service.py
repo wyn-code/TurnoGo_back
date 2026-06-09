@@ -15,6 +15,36 @@ from app.models.horarios_negocio import HorarioNegocio
 
 logger = logging.getLogger(__name__)
 
+ALLOWED_FIELDS = {
+    "nombre",
+    "wsp",
+    "telefono",
+    "direccion",
+    "ciudad",
+    "ig_url",
+    "logo",
+    "activo",
+    "id_categoria",
+    "id_localidad",
+    "id_provincia"
+}
+
+
+def obtener_negocios_mapa(db: Session):
+    return (
+        db.query(
+            Negocio.id_negocio,
+            Negocio.nombre,
+            Negocio.latitud,
+            Negocio.longitud,
+        )
+        .filter(
+            Negocio.latitud.isnot(None),
+            Negocio.longitud.isnot(None),
+            Negocio.activo == True
+        )
+        .all()
+    )
 
 def listar_negocios(db: Session):
     return db.query(Negocio).filter(
@@ -23,44 +53,15 @@ def listar_negocios(db: Session):
 
 
 def listar_negocios_admin(db: Session):
-    resultados = (
-        db.query(Negocio, Usuario)
-        .options(joinedload(Negocio.categoria))
-        .join(
-            Usuario,
-            Negocio.usuario_id == Usuario.id_us
+    return (
+        db.query(Negocio)
+        .options(
+            joinedload(Negocio.categoria),
+            joinedload(Negocio.usuario),
         )
+        .filter(Negocio.activo == True)
         .all()
     )
-
-    negocios = []
-
-    for negocio, usuario in resultados:
-        negocios.append({
-            "id_negocio": negocio.id_negocio,
-            "nombre": negocio.nombre,
-
-            "wsp": negocio.wsp,
-            "telefono": negocio.telefono,
-            "direccion": negocio.direccion,
-            "ciudad": negocio.ciudad,
-            "ig_url": negocio.ig_url,
-
-            "categoria":
-                negocio.categoria.nombre
-                if negocio.categoria
-                else None,
-
-            "slug": negocio.slug,
-            "activo": negocio.activo,
-
-            "duenio": {
-                "nombre": usuario.usuario_us,
-                "email": usuario.email_us,
-            },
-        })
-
-    return negocios
 
 
 def obtener_negocio_por_id(db: Session, negocio_id: int):
@@ -79,25 +80,19 @@ def obtener_negocio_por_id(db: Session, negocio_id: int):
     return negocio
 
 
-def obtener_negocio_publico_por_id(
-    db: Session,
-    negocio_id: int
-):
-    negocio = db.query(Negocio).options(
-        joinedload(Negocio.categoria)
-    ).filter(
-        Negocio.id_negocio == negocio_id,
-        Negocio.activo == True
-    ).first()
-
-    if not negocio:
-        raise HTTPException(
-            status_code=404,
-            detail="Negocio no encontrado"
+def obtener_negocio_publico_por_id(db: Session, negocio_id: int):
+    return (
+        db.query(Negocio)
+        .options(
+            joinedload(Negocio.categoria),
+            joinedload(Negocio.horarios)  
         )
-
-    return negocio
-
+        .filter(
+            Negocio.id_negocio == negocio_id,
+            Negocio.activo == True
+        )
+        .first()
+    )
 
 def obtener_negocio_por_slug(db: Session, slug: str):
     negocio = db.query(Negocio).options(
@@ -107,14 +102,12 @@ def obtener_negocio_por_slug(db: Session, slug: str):
         Negocio.slug == slug,
         Negocio.activo == True
     ).first()
-
     if not negocio:
         raise HTTPException(
             status_code=404,
             detail="Negocio no encontrado"
         )
-    print("ID NEGOCIO:", negocio.id_negocio)
-    print("HORARIOS:", negocio.horarios)
+    
     return negocio
 
 
@@ -137,26 +130,37 @@ def generar_slug_unico(db, nombre: str):
     return slug
 
 
-# ==============================
-# 🔥 CREAR NEGOCIO SIMPLE
-# ==============================
-def crear_negocio(db: Session, data: NegocioCreate):
+def crear_negocio_completo(db: Session, data: NegocioCompleteCreate):
 
-    if data.usuario_id is None:
-        raise HTTPException(
-            status_code=400, detail="usuario_id es obligatorio")
+    if not data.usuario_id:
+        raise HTTPException(400, "usuario_id es obligatorio")
 
-    if data.id_categoria is None:
-        raise HTTPException(
-            status_code=400, detail="id_categoria es obligatorio")
+    if not data.id_categoria:
+        raise HTTPException(400, "id_categoria es obligatorio")
 
-    # 🔥 Obtener categoría
     categoria = db.query(Categoria).filter(
         Categoria.id_categoria == data.id_categoria
     ).first()
 
     if not categoria:
-        raise HTTPException(status_code=400, detail="Categoría no válida")
+        raise HTTPException(400, "Categoría no válida")
+
+    # 🔥 GEOCODING MEJORADO
+    latitud, longitud = None, None
+
+    try:
+        if data.direccion:
+            coords = obtener_coordenadas(
+                direccion=f"{data.direccion}, {data.ciudad or ''}, Argentina",
+                ciudad=data.ciudad,
+                provincia=str(data.id_provincia) if data.id_provincia else None
+            )
+
+            if coords:
+                latitud, longitud = coords
+
+    except Exception:
+        logger.exception("Error obteniendo coordenadas desde Mapbox")
 
     slug = generar_slug_unico(db, data.nombre)
 
@@ -174,80 +178,6 @@ def crear_negocio(db: Session, data: NegocioCreate):
         activo=data.activo,
         id_categoria=data.id_categoria,
         slug=slug,
-    )
-
-    try:
-        db.add(nuevo_negocio)
-        db.commit()
-        db.refresh(nuevo_negocio)
-        return nuevo_negocio
-
-    except IntegrityError as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=400,
-            detail=f"Error de integridad al crear negocio: {str(e.orig)}",
-        )
-
-
-# ==============================
-# 🔥 CREAR NEGOCIO COMPLETO
-# ==============================
-def crear_negocio_completo(db: Session, data: NegocioCompleteCreate):
-
-    if data.usuario_id is None:
-        raise HTTPException(
-            status_code=400, detail="usuario_id es obligatorio")
-
-    if data.id_categoria is None:
-        raise HTTPException(
-            status_code=400, detail="id_categoria es obligatorio")
-
-    # 🔥 Obtener categoría
-    categoria = db.query(Categoria).filter(
-        Categoria.id_categoria == data.id_categoria
-    ).first()
-
-    if not categoria:
-        raise HTTPException(status_code=400, detail="Categoría no válida")
-
-    latitud = None
-    longitud = None
-
-    try:
-        if data.direccion and data.ciudad:
-            latitud, longitud = obtener_coordenadas(
-                f"{data.direccion}, {data.ciudad}, Argentina"
-            )
-
-    except Exception:
-        logger.exception(
-            "Error obteniendo coordenadas desde Mapbox"
-        )
-
-    if latitud is not None and longitud is not None:
-        if latitud == 0 or longitud == 0:
-            latitud = None
-            longitud = None
-
-    slug = generar_slug_unico(db, data.nombre)
-
-    nuevo_negocio = Negocio(
-        usuario_id=data.usuario_id,
-        nombre=data.nombre,
-        # ✅ ELIMINADA la línea rubro=rubro
-        wsp=data.wsp,
-        telefono=data.telefono,
-        direccion=data.direccion,
-        ciudad=data.ciudad,
-        id_localidad=data.id_localidad,
-        id_provincia=data.id_provincia,
-        ig_url=data.ig_url,
-        logo=data.logo,
-        activo=data.activo,
-        id_categoria=data.id_categoria,  # 👈 Esto es lo que importa ahora
-        slug=slug,
-
         latitud=latitud,
         longitud=longitud,
     )
@@ -256,40 +186,26 @@ def crear_negocio_completo(db: Session, data: NegocioCompleteCreate):
         db.add(nuevo_negocio)
         db.flush()
 
-        # 🔥 Servicios
+        # 🔥 SERVICIOS
         for servicio in data.servicios:
-            nuevo_servicio = Servicio(
-                nombre_servicio=servicio.nombre_servicio,
-                precio=servicio.precio,
-                requiere_aprobacion=servicio.requiere_aprobacion,
-                duracion_min=servicio.duracion_min,
-                duracion_max=servicio.duracion_max,
-                activo=servicio.activo,
-                id_negocio=nuevo_negocio.id_negocio
-            )
-            db.add(nuevo_servicio)
-
-        # 🔥 Empleados
-        for empleado in data.empleados:
-            nuevo_empleado = Empleado(
-                nombre=empleado.nombre,
-                apellido=empleado.apellido,
-                telefono=empleado.telefono,
-                activo=empleado.activo,
-                id_negocio=nuevo_negocio.id_negocio
-            )
-            db.add(nuevo_empleado)
-
-        print("HORARIOS RECIBIDOS:", data.horarios)
-        # Horarios
-        for horario in data.horarios:
-            nuevo_horario = HorarioNegocio(
+            db.add(Servicio(
                 id_negocio=nuevo_negocio.id_negocio,
-                dia_semana=horario.dia_semana,
-                hora_apertura=horario.hora_apertura,
-                hora_cierre=horario.hora_cierre,
-            )
-            db.add(nuevo_horario)
+                **servicio.model_dump()
+            ))
+
+        # 🔥 EMPLEADOS
+        for empleado in data.empleados:
+            db.add(Empleado(
+                id_negocio=nuevo_negocio.id_negocio,
+                **empleado.model_dump()
+            ))
+
+        # 🔥 HORARIOS
+        for horario in data.horarios:
+            db.add(HorarioNegocio(
+                id_negocio=nuevo_negocio.id_negocio,
+                **horario.model_dump()
+            ))
 
         db.commit()
         db.refresh(nuevo_negocio)
@@ -298,12 +214,86 @@ def crear_negocio_completo(db: Session, data: NegocioCompleteCreate):
 
     except Exception as e:
         db.rollback()
+        logger.exception(f"Error creando negocio completo: {e}")
 
-        logger.exception(
-            f"Error creando negocio completo: {e}"
+        raise HTTPException(500, "Error al crear el negocio")
+    
+ # 🔥 UPDATE NEGOCIO
+def actualizar_negocio(db: Session, negocio_id: int, data, current_user: Usuario):
+
+    negocio = db.query(Negocio).filter(
+        Negocio.id_negocio == negocio_id
+    ).first()
+
+    if not negocio:
+        raise HTTPException(404)
+
+    if negocio.usuario_id != current_user.id_us and current_user.role != "admin":
+        raise HTTPException(403)
+
+    update_data = data.model_dump(exclude_unset=True)
+
+    old_direccion = negocio.direccion
+    old_ciudad = negocio.ciudad
+
+    for k, v in update_data.items():
+        if k in ALLOWED_FIELDS:
+            setattr(negocio, k, v)
+
+    # 🔥 geocoding solo si cambió ubicación real
+    if (
+        negocio.direccion != old_direccion or
+        negocio.ciudad != old_ciudad
+    ):
+        coords = obtener_coordenadas(
+            direccion=f"{negocio.direccion}, {negocio.ciudad}, Argentina",
+            ciudad=negocio.ciudad,
+            provincia=str(negocio.id_provincia)
         )
 
-        raise HTTPException(
-            status_code=500,
-            detail="Error al crear el negocio"
-        )
+        if coords:
+            negocio.latitud, negocio.longitud = coords
+
+    db.commit()
+    db.refresh(negocio)
+
+    return negocio
+
+
+def eliminar_negocio(db: Session, negocio_id: int, current_user: Usuario):
+
+    if current_user.role != "admin":
+        raise HTTPException(403)
+
+    negocio = db.query(Negocio).filter(
+        Negocio.id_negocio == negocio_id
+    ).first()
+
+    if not negocio:
+        raise HTTPException(404)
+
+    negocio.activo = False
+
+    db.commit()
+
+#
+def backfill_negocios(db: Session):
+    negocios = db.query(Negocio).all()
+
+    for n in negocios:
+        updated = False
+
+        # 1. coordenadas (único dato realmente reconstruible)
+        if not n.latitud or not n.longitud:
+            coords = obtener_coordenadas(
+                f"{n.direccion}, {n.ciudad}, Argentina"
+            )
+
+            if coords:
+                n.latitud, n.longitud = coords
+                updated = True
+
+        if updated:
+            db.add(n)
+
+    db.commit()

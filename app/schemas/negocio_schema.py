@@ -37,29 +37,24 @@ class NegocioCreate(NegocioBase):
     id_categoria: int
 
 
-
-class NegocioResponse(NegocioBase):
+class NegocioResponse(BaseModel):
     id_negocio: int
-    creado_at: datetime
-    usuario_id: Optional[int] = None
-    slug: Optional[str] = None
-    categoria: Optional[CategoriaResponse] = None
-    latitud: Optional[float] = None
-    longitud: Optional[float] = None
-
-    horarios: List[HorarioNegocioResponse] = Field(default_factory=list)
- 
-    model_config = ConfigDict(
-        from_attributes=True
-    )
+    nombre: str
+    direccion: str
+    ciudad: str
+    latitud: float | None
+    longitud: float | None
+    slug: str
+    id_categoria: int
+    categoria: CategoriaResponse | None
+    horarios: list[HorarioNegocioResponse] = Field(default_factory=list)
+    model_config = ConfigDict(from_attributes=True)
 
 
-class NegocioCompleteCreate(
-    NegocioCreate
-):
-    servicios: List[ServicioCreate] = (Field(default_factory=list))
-    empleados: List[EmpleadoCreate] = (Field(default_factory=list))
-    horarios: List[HorarioNegocioCreate] = Field(default_factory=list)
+class NegocioCompleteCreate(NegocioCreate):
+    servicios: list[ServicioCreate] = Field(default_factory=list)
+    empleados: list[EmpleadoCreate] = Field(default_factory=list)
+    horarios: list[HorarioNegocioCreate] = Field(default_factory=list)
 
 
 class NegocioCompleteResponse(
@@ -68,7 +63,7 @@ class NegocioCompleteResponse(
     servicios: List[ServicioResponse] = (Field(default_factory=list))
     empleados: List[EmpleadoResponse] = (Field(default_factory=list))
     horarios: List[HorarioNegocioResponse] = Field(default_factory=list)
-    
+
 
 class NegocioUpdate(BaseModel):
     nombre: str | None = None
@@ -77,40 +72,36 @@ class NegocioUpdate(BaseModel):
     direccion: str | None = None
     ciudad: str | None = None
     ig_url: str | None = None
-    activo: bool | None = None
+    logo: str | None = None
     id_categoria: int | None = None
-
+    id_localidad: int | None = None
+    id_provincia: int | None = None
+    activo: bool | None = None
 
 
 class DuenioResponse(BaseModel):
     nombre: str
     email: str
+    model_config = ConfigDict(from_attributes=True)
 
 
-class NegocioAdminResponse(
-    BaseModel
-):
+class NegocioAdminResponse(BaseModel):
     id_negocio: int
     nombre: str
-
-    wsp: str | None = None
-    telefono: str | None = None
-    direccion: str | None = None
-    ciudad: str | None = None
-    ig_url: str | None = None
-
-    categoria: str | None = None
-    slug: str
+    wsp: str | None
+    telefono: str | None
+    direccion: str | None
+    ciudad: str | None
+    ig_url: str | None
     activo: bool
-
+    slug: str
     duenio: DuenioResponse
+    model_config = ConfigDict(from_attributes=True)
 
 
 class NegocioMapaResponse(BaseModel):
     id_negocio: int
     nombre: str
-    latitud: Optional[float] = None
-    longitud: Optional[float] = None
-
-    class Config:
-        from_attributes = True
+    latitud: float | None
+    longitud: float | None
+    model_config = ConfigDict(from_attributes=True)
