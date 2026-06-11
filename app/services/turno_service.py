@@ -8,7 +8,8 @@ from app.models.cliente import Cliente
 from app.models.servicio import Servicio
 from app.models.turnos import Turno
 from app.schemas.appointment_schema import TurnoActualizar, TurnoCrear
-from app.services.whatsapp_service import enviar_whatsapp
+from app.services.whatsapp_service import enviar_notificacion_turno
+# 🔥 Importamos tu nuevo servicio de Twilio
 
 
 SOLAPAMIENTO_DETALLE = "El empleado ya tiene un turno en ese horario"
@@ -19,10 +20,8 @@ ESTADO_PENDIENTE_APROBACION = 2
 ESTADO_CONFIRMADO = 3
 
 
-
 def listar_turnos(db: Session):
     return db.query(Turno).all()
-
 
 
 def obtener_turno_por_id(db: Session, turno_id: int):
@@ -84,10 +83,6 @@ def _resolver_fecha_hora_fin(
     fecha_hora_inicio: datetime,
     fecha_hora_fin: datetime | None = None,
 ) -> datetime:
-    """
-    Si no viene fecha_hora_fin, la calcula usando duracion_min del servicio.
-    Siempre valida que el servicio pertenezca al negocio.
-    """
     if fecha_hora_fin is not None:
         return fecha_hora_fin
 
@@ -150,12 +145,11 @@ def crear_turno(db: Session, turno: TurnoCrear, background_tasks: BackgroundTask
             detail=SOLAPAMIENTO_DETALLE,
         )
 
-    # 1. Buscamos los datos del cliente para WhatsApp ANTES de crear el turno
-    cliente = db.query(Cliente).filter(
-        Cliente.id_cliente == turno.id_cliente).first()
+    # Buscamos los datos del cliente para WhatsApp ANTES de crear el turno
+    cliente = db.query(Cliente).filter(Cliente.id_cliente == turno.id_cliente).first()
     if not cliente:
         raise HTTPException(
-            status_code=444,  # O el código que manejes para recursos no encontrados
+            status_code=404,  # Cambiado a 404 estándar de HTTP para Not Found
             detail="El cliente especificado no existe."
         )
 
@@ -180,22 +174,33 @@ def crear_turno(db: Session, turno: TurnoCrear, background_tasks: BackgroundTask
         db.commit()
         db.refresh(nuevo_turno)
 
-        # LO HACEMOS EN DIRECTO ACÁ EN EL SERVICE PARA DEPURAR
-        print("\n--- ENVIANDO PRUEBA DE WHATSAPP ---")
+        # 🚀 INTEGRACIÓN DE TWILIO CON BACKGROUND TASKS 🚀
+        try:
+            # Formateamos fecha y hora como strings limpios antes de mandárselos a Twilio
+            fecha_str = turno.fecha_hora_inicio.strftime("%d/%m/%Y")
+            hora_str = turno.fecha_hora_inicio.strftime("%H:%M")
+            nombre_completo = f"{cliente.nombre} {cliente.apellido}".strip()
+            
+            # Traemos el nombre del negocio mediante la relación del servicio
+            nombre_negocio = servicio.negocio.nombre if hasattr(servicio, "negocio") else "TurnoGo"
 
-        nombre_completo = f"{cliente.nombre} {cliente.apellido}"
+            print(f"\n⏳ Encolando envío de WhatsApp en segundo plano para: {nombre_completo}")
+            
+            # Encolamos la tarea. FastAPI va a responder el HTTP 201 inmediatamente 
+            # y en paralelo ejecutará esto sin trabar al usuario.
+            background_tasks.add_task(
+                enviar_notificacion_turno,
+                telefono_cliente=cliente.telefono,
+                nombre_cliente=nombre_completo,
+                nombre_negocio=nombre_negocio,
+                fecha=fecha_str,
+                hora=hora_str
+            )
+            print("📦 Tarea registrada con éxito en BackgroundTasks.\n")
 
-        # Mandamos strings fijos para asegurarnos de que no rompa por formato
-        resultado = enviar_whatsapp(
-            telefono=cliente.telefono,
-            nombre_cliente=nombre_completo,
-            fecha=turno.fecha_hora_inicio.date(),
-            hora=turno.fecha_hora_inicio.time(),
-            nombre_negocio=servicio.negocio.nombre,
-        )
-
-        print(f"Respuesta del servidor de Meta: {resultado}")
-        print("-----------------------------------\n")
+        except Exception as bg_error:
+            # Si se rompe el formateo o la cola, lo capturamos para que NO rompa el commit exitoso del turno
+            print(f"⚠️ Alerta: El turno se creó pero falló la cola de WhatsApp: {bg_error}")
 
         return nuevo_turno
 
@@ -225,7 +230,6 @@ def actualizar_turno(db: Session, turno_id: int, datos: TurnoActualizar):
         else turno_db.fecha_hora_inicio
     )
 
-    # Siempre validar que el servicio siga perteneciendo al negocio resultante
     servicio = obtener_servicio_del_negocio(
         db=db,
         id_servicio=nuevo_id_servicio,
@@ -253,7 +257,7 @@ def actualizar_turno(db: Session, turno_id: int, datos: TurnoActualizar):
     validar_rango_horario(nueva_fecha_inicio, nueva_fecha_fin)
     if hay_superposicion(
         db=db,
-        id_negocio=nuevo_id_negocio,   # 🔥 agregar
+        id_negocio=nuevo_id_negocio,
         id_empleado=nuevo_id_empleado,
         inicio=nueva_fecha_inicio,
         fin=nueva_fecha_fin,
@@ -273,8 +277,6 @@ def actualizar_turno(db: Session, turno_id: int, datos: TurnoActualizar):
     turno_db.fecha_hora_inicio = nueva_fecha_inicio
     turno_db.fecha_hora_fin = nueva_fecha_fin
 
-    # Si te mandan un estado manual desde update, lo respetás.
-    # Si cambió el servicio y NO te mandaron estado, podés mantener el actual.
     if datos.id_estado is not None:
         turno_db.id_estado = datos.id_estado
 
