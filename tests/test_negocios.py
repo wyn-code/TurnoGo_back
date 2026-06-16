@@ -1,3 +1,10 @@
+from .auth import obtener_token
+
+
+def headers_duenio_sin_negocio(client):
+    return obtener_token(client, "test2@test.com", "123456")
+
+
 def test_listar_negocios_vacio(client):
     response = client.get("/api/negocios/")
     assert response.status_code == 200
@@ -29,7 +36,11 @@ def test_crear_negocio(client, seed_data):
         "id_categoria": 1,
     }
 
-    response = client.post("/api/negocios/", json=data)
+    response = client.post(
+        "/api/negocios/",
+        json=data,
+        headers=headers_duenio_sin_negocio(client),
+    )
     assert response.status_code in [200, 201], response.text
 
     body = response.json()
@@ -54,7 +65,11 @@ def test_listar_negocios_con_un_registro(client, seed_data):
         "id_categoria": 1,
     }
 
-    create_response = client.post("/api/negocios/", json=data)
+    create_response = client.post(
+        "/api/negocios/",
+        json=data,
+        headers=headers_duenio_sin_negocio(client),
+    )
     assert create_response.status_code in [200, 201], create_response.text
 
     list_response = client.get("/api/negocios/")
@@ -78,7 +93,11 @@ def test_traer_negocio_por_id(client, seed_data):
         "id_categoria": 1,
     }
 
-    create_response = client.post("/api/negocios/", json=data)
+    create_response = client.post(
+        "/api/negocios/",
+        json=data,
+        headers=headers_duenio_sin_negocio(client),
+    )
     assert create_response.status_code in [200, 201], create_response.text
 
     negocio_creado = create_response.json()
@@ -105,7 +124,11 @@ def test_traer_negocio_por_slug(client, seed_data):
         "id_categoria": 1,
     }
 
-    create_response = client.post("/api/negocios/", json=data)
+    create_response = client.post(
+        "/api/negocios/",
+        json=data,
+        headers=headers_duenio_sin_negocio(client),
+    )
     assert create_response.status_code in [200, 201], create_response.text
 
     get_response = client.get("/api/negocios/slug/negocio-slug-test")
@@ -116,3 +139,121 @@ def test_traer_negocio_por_slug(client, seed_data):
 
     assert body["nombre"] == data["nombre"]
     assert body["slug"] == "negocio-slug-test"
+
+
+def test_crear_negocio_completo_con_imagenes(client, seed_data):
+    data = {
+        "nombre": "Negocio Imagenes Test",
+        "wsp": "3364444444",
+        "telefono": "3364444444",
+        "direccion": "Imagenes 123",
+        "ciudad": "San Nicolas",
+        "activo": True,
+        "usuario_id": 2,
+        "id_categoria": 1,
+        "descripcion": "Descripción pública del negocio",
+        "logo": "https://cloudinary.com/logo.jpg",
+        "imagenes": [
+            "https://cloudinary.com/img1.jpg",
+            "https://cloudinary.com/img2.jpg",
+            "https://cloudinary.com/img3.jpg",
+        ],
+    }
+
+    response = client.post(
+        "/api/negocios/complete",
+        json=data,
+        headers=headers_duenio_sin_negocio(client),
+    )
+    assert response.status_code == 201, response.text
+
+    body = response.json()
+    assert body["descripcion"] == data["descripcion"]
+    assert body["logo"] == data["logo"]
+    assert body["imagenes"] == [
+        {
+            "id_imagen": body["imagenes"][0]["id_imagen"],
+            "url": "https://cloudinary.com/img1.jpg",
+            "es_portada": True,
+            "orden": 0,
+        },
+        {
+            "id_imagen": body["imagenes"][1]["id_imagen"],
+            "url": "https://cloudinary.com/img2.jpg",
+            "es_portada": False,
+            "orden": 1,
+        },
+        {
+            "id_imagen": body["imagenes"][2]["id_imagen"],
+            "url": "https://cloudinary.com/img3.jpg",
+            "es_portada": False,
+            "orden": 2,
+        },
+    ]
+
+
+def test_traer_negocio_por_slug_devuelve_imagenes_ordenadas(client, seed_data):
+    data = {
+        "nombre": "Negocio Detalle Imagenes",
+        "wsp": "3364555555",
+        "telefono": "3364555555",
+        "direccion": "Detalle 123",
+        "ciudad": "San Nicolas",
+        "activo": True,
+        "usuario_id": 2,
+        "id_categoria": 1,
+        "imagenes": [
+            "https://cloudinary.com/portada.jpg",
+            "https://cloudinary.com/segunda.jpg",
+        ],
+    }
+
+    create_response = client.post(
+        "/api/negocios/complete",
+        json=data,
+        headers=headers_duenio_sin_negocio(client),
+    )
+    assert create_response.status_code == 201, create_response.text
+
+    slug = create_response.json()["slug"]
+    get_response = client.get(f"/api/negocios/slug/{slug}")
+    assert get_response.status_code == 200
+
+    imagenes = get_response.json()["imagenes"]
+    assert [imagen["url"] for imagen in imagenes] == data["imagenes"]
+    assert [imagen["orden"] for imagen in imagenes] == [0, 1]
+    assert [imagen["es_portada"] for imagen in imagenes] == [True, False]
+
+
+def test_listar_negocios_no_devuelve_imagenes(client, seed_data):
+    data = {
+        "nombre": "Negocio Listado Imagenes",
+        "wsp": "3364666666",
+        "telefono": "3364666666",
+        "direccion": "Listado 123",
+        "ciudad": "San Nicolas",
+        "activo": True,
+        "usuario_id": 2,
+        "id_categoria": 1,
+        "logo": "https://cloudinary.com/logo-listado.jpg",
+        "imagenes": [
+            "https://cloudinary.com/listado1.jpg",
+        ],
+    }
+
+    create_response = client.post(
+        "/api/negocios/complete",
+        json=data,
+        headers=headers_duenio_sin_negocio(client),
+    )
+    assert create_response.status_code == 201, create_response.text
+
+    list_response = client.get("/api/negocios/")
+    assert list_response.status_code == 200
+
+    negocio = next(
+        n for n in list_response.json()
+        if n["nombre"] == "Negocio Listado Imagenes"
+    )
+    assert negocio["logo"] == data["logo"]
+    assert "imagenes" not in negocio

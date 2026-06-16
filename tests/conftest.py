@@ -90,14 +90,16 @@ def seed_data(db):
         id_us=1,
         usuario_us="testuser1",
         email_us="test1@test.com",
-        contrasena_us=get_password_hash("123456")
+        contrasena_us=get_password_hash("123456"),
+        email_verified=True,
     )
 
     usuario_2 = Usuario(
         id_us=2,
         usuario_us="testuser2",
         email_us="test2@test.com",
-        contrasena_us=get_password_hash("123456")
+        contrasena_us=get_password_hash("123456"),
+        email_verified=True,
     )
 
     db.add_all([usuario_1, usuario_2])

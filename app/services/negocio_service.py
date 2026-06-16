@@ -1,15 +1,15 @@
 import re
 import logging
 from fastapi import HTTPException
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, selectinload
 from app.models.negocio import Negocio
 from app.models.usuario import Usuario
 from app.models.servicio import Servicio
 from app.models.empleado import Empleado
 from app.models.categoria import Categoria
+from app.models.negocio_imagen import NegocioImagen
 from app.services.mapbox_service import obtener_coordenadas
-from app.schemas.negocio_schema import NegocioCreate, NegocioCompleteCreate
+from app.schemas.negocio_schema import NegocioCompleteCreate
 from app.models.horarios_negocio import HorarioNegocio
 
 
@@ -23,6 +23,7 @@ ALLOWED_FIELDS = {
     "ciudad",
     "ig_url",
     "logo",
+    "descripcion",
     "activo",
     "id_categoria",
     "id_localidad",
@@ -81,11 +82,12 @@ def obtener_negocio_por_id(db: Session, negocio_id: int):
 
 
 def obtener_negocio_publico_por_id(db: Session, negocio_id: int):
-    return (
+    negocio = (
         db.query(Negocio)
         .options(
             joinedload(Negocio.categoria),
-            joinedload(Negocio.horarios)  
+            selectinload(Negocio.horarios),
+            selectinload(Negocio.imagenes),
         )
         .filter(
             Negocio.id_negocio == negocio_id,
@@ -93,12 +95,20 @@ def obtener_negocio_publico_por_id(db: Session, negocio_id: int):
         )
         .first()
     )
+    if not negocio:
+        raise HTTPException(
+            status_code=404,
+            detail="Negocio no encontrado"
+        )
+
+    return negocio
 
 def obtener_negocio_por_slug(db: Session, slug: str):
     negocio = db.query(Negocio).options(
         joinedload(Negocio.categoria),
-        joinedload(Negocio.horarios)
-    ).filter(
+        selectinload(Negocio.horarios),
+        selectinload(Negocio.imagenes), 
+        ).filter(
         Negocio.slug == slug,
         Negocio.activo == True
     ).first()
@@ -134,6 +144,10 @@ def crear_negocio_completo(db: Session, data: NegocioCompleteCreate):
 
     if not data.usuario_id:
         raise HTTPException(400, "usuario_id es obligatorio")
+
+    usuario = db.query(Usuario).filter(Usuario.id_us == data.usuario_id).first()
+    if not usuario:
+        raise HTTPException(400, "Usuario no válido")
 
     if not data.id_categoria:
         raise HTTPException(400, "id_categoria es obligatorio")
@@ -175,6 +189,7 @@ def crear_negocio_completo(db: Session, data: NegocioCompleteCreate):
         id_provincia=data.id_provincia,
         ig_url=data.ig_url,
         logo=data.logo,
+        descripcion=data.descripcion,
         activo=data.activo,
         id_categoria=data.id_categoria,
         slug=slug,
@@ -185,6 +200,15 @@ def crear_negocio_completo(db: Session, data: NegocioCompleteCreate):
     try:
         db.add(nuevo_negocio)
         db.flush()
+
+        imagenes = [url.strip() for url in (data.imagenes or []) if url and url.strip()]
+        for index, url in enumerate(imagenes):
+            db.add(NegocioImagen(
+                id_negocio=nuevo_negocio.id_negocio,
+                url=url,
+                es_portada=index == 0,
+                orden=index,
+            ))
 
         # 🔥 SERVICIOS
         for servicio in data.servicios:
@@ -221,9 +245,12 @@ def crear_negocio_completo(db: Session, data: NegocioCompleteCreate):
  # 🔥 UPDATE NEGOCIO
 def actualizar_negocio(db: Session, negocio_id: int, data, current_user: Usuario):
 
-    negocio = db.query(Negocio).filter(
-        Negocio.id_negocio == negocio_id
-    ).first()
+    negocio = (
+        db.query(Negocio)
+        .options(selectinload(Negocio.imagenes))
+        .filter(Negocio.id_negocio == negocio_id)
+        .first()
+    )
 
     if not negocio:
         raise HTTPException(404)
@@ -232,6 +259,15 @@ def actualizar_negocio(db: Session, negocio_id: int, data, current_user: Usuario
         raise HTTPException(403)
 
     update_data = data.model_dump(exclude_unset=True)
+    imagenes = update_data.pop("imagenes", None)
+
+    if "id_categoria" in update_data and update_data["id_categoria"] is not None:
+        categoria = db.query(Categoria).filter(
+            Categoria.id_categoria == update_data["id_categoria"]
+        ).first()
+
+        if not categoria:
+            raise HTTPException(400, "Categoría no válida")
 
     old_direccion = negocio.direccion
     old_ciudad = negocio.ciudad
@@ -239,6 +275,17 @@ def actualizar_negocio(db: Session, negocio_id: int, data, current_user: Usuario
     for k, v in update_data.items():
         if k in ALLOWED_FIELDS:
             setattr(negocio, k, v)
+
+    if imagenes is not None:
+        urls = [url.strip() for url in imagenes if url and url.strip()]
+        negocio.imagenes = [
+            NegocioImagen(
+                url=url,
+                es_portada=index == 0,
+                orden=index,
+            )
+            for index, url in enumerate(urls)
+        ]
 
     # 🔥 geocoding solo si cambió ubicación real
     if (

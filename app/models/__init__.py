@@ -6,4 +6,5 @@ from .usuario import Usuario
 from .provincia import Provincia
 from .localidad import Localidad
 from .negocio import Negocio
+from .negocio_imagen import NegocioImagen
 from .empleado import Empleado

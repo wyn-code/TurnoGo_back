@@ -4,6 +4,7 @@ from app.core.dependencies import get_current_user, get_db
 from app.models.usuario import Usuario
 from app.schemas.negocio_schema import (
     NegocioResponse,
+    NegocioListResponse,
     NegocioCompleteCreate,
     NegocioCompleteResponse,
     NegocioAdminResponse,
@@ -23,7 +24,7 @@ def mapa(db: Session = Depends(get_db)):
     return negocio_service.obtener_negocios_mapa(db)
 
 
-@router.get("/", response_model=list[NegocioResponse])
+@router.get("/", response_model=list[NegocioListResponse])
 def ver_negocios(db: Session = Depends(get_db)):
     return negocio_service.listar_negocios(db)
 
@@ -31,6 +32,19 @@ def ver_negocios(db: Session = Depends(get_db)):
 @router.get("/admin", response_model=list[NegocioAdminResponse])
 def ver_negocios_admin(db: Session = Depends(get_db)):
     return negocio_service.listar_negocios_admin(db)
+
+
+@router.post("/", response_model=NegocioCompleteResponse, status_code=status.HTTP_201_CREATED)
+def post_negocio(
+    data: NegocioCompleteCreate,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    if data.id_categoria is None:
+        raise HTTPException(status_code=400, detail="id_categoria es obligatorio")
+
+    data.usuario_id = current_user.id_us
+    return negocio_service.crear_negocio_completo(db, data)
 
 
 @router.get("/slug/{slug}", response_model=NegocioResponse)
@@ -50,10 +64,15 @@ def ver_negocio_por_id(
 
 
 @router.post("/complete", response_model=NegocioCompleteResponse, status_code=status.HTTP_201_CREATED)
-def post_negocio_completo(data: NegocioCompleteCreate, db: Session = Depends(get_db)):
+def post_negocio_completo(
+    data: NegocioCompleteCreate,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
     if data.id_categoria is None:
         raise HTTPException(status_code=400, detail="id_categoria es obligatorio")
 
+    data.usuario_id = current_user.id_us
     return negocio_service.crear_negocio_completo(db, data)
 
 @router.put("/{negocio_id}", response_model=NegocioResponse)

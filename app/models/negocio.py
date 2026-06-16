@@ -19,6 +19,7 @@ class Negocio(Base):
     ig_url = Column(String(200), nullable=True)
     slug = Column(String(150), unique=True, nullable=False, index=True)
     logo = Column(String(255), nullable=True)
+    descripcion = Column(String(1000), nullable=True)
     activo = Column(Boolean, default=True, nullable=False)
     creado_at = Column(DateTime, default=datetime.now, nullable=False)
     id_categoria = Column(Integer, ForeignKey("categorias.id_categoria"), nullable=False)
@@ -31,3 +32,9 @@ class Negocio(Base):
     usuario = relationship("Usuario", back_populates="negocio")
     categoria = relationship("Categoria", back_populates="negocios")
     horarios = relationship("HorarioNegocio", back_populates="negocio", cascade="all, delete-orphan")
+    imagenes = relationship(
+        "NegocioImagen",
+        back_populates="negocio",
+        cascade="all, delete-orphan",
+        order_by="NegocioImagen.orden",
+    )
