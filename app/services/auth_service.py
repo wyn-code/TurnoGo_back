@@ -1,14 +1,18 @@
 from datetime import datetime, timedelta
 import secrets
 import re
+
 from app.services.email_service import (
     send_verification_email,
+    send_reset_password_email,
 )
 from fastapi import HTTPException, status
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from app.core.config import ACCESS_TOKEN_EXPIRE_MINUTES
+from app.core.config import (
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+)
 from app.core.security import (
     create_access_token,
     get_password_hash,
@@ -148,7 +152,7 @@ def build_me_response(db: Session, current_user: Usuario) -> dict:
         "role": current_user.role,
     }
 
-'''
+
 def forgot_password(
     db: Session,
     email: str,
@@ -200,7 +204,6 @@ def forgot_password(
         )
     }
 
-'''
 
 def reset_password(
     db: Session,

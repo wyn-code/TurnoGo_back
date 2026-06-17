@@ -12,24 +12,16 @@ def send_verification_email(
     email: str,
     token: str,
 ):
-    print("Entró a send_verification_email")
-    print("Email:", email)
-
     verification_link = (
         f"{FRONTEND_URL}/verify-email/{token}"
     )
 
-    print(
-        "Verification link:",
-        verification_link
-    )
-
     params = {
-        "from": "onboarding@resend.dev",
+        "from": "TurnoGo <contacto@turnogo.app>",
         "to": [email],
         "subject": "Verificá tu cuenta",
         "html": f"""
-            <h2>Bienvenido a Turnexo</h2>
+            <h2>Bienvenido a TurnoGo</h2>
 
             <p>
                 Hacé click en el siguiente enlace
@@ -46,11 +38,50 @@ def send_verification_email(
         """,
     }
 
-    print("Enviando email a Resend...")
+    print("=== ENVIANDO EMAIL ===")
+    print("Destinatario:", email)
+    print("Link:", verification_link)
 
     response = resend.Emails.send(params)
 
-    print("Respuesta Resend:")
+    print("=== RESPUESTA RESEND ===")
     print(response)
 
     return response
+
+
+def send_reset_password_email(
+    email: str,
+    token: str,
+):
+    reset_link = (
+        f"{FRONTEND_URL}/restablecer-contrasena/{token}"
+    )
+
+    params = {
+        "from": "Turnogo <contacto@turnogo.app>",
+        "to": [email],
+        "subject": "Restablecer contraseña",
+        "html": f"""
+            <h2>Restablecer contraseña</h2>
+
+            <p>
+                Recibimos una solicitud para cambiar
+                la contraseña de tu cuenta.
+            </p>
+
+            <p>
+                Hacé click en el siguiente enlace:
+            </p>
+
+            <a href="{reset_link}">
+                Restablecer contraseña
+            </a>
+
+            <p>
+                Este enlace expirará en 1 hora.
+            </p>
+        """,
+    }
+
+    return resend.Emails.send(params)
