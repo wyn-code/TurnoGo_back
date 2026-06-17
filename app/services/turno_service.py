@@ -11,7 +11,6 @@ from app.models.negocio import Negocio
 from app.models.servicio import Servicio
 from app.models.turnos import Turno
 from app.schemas.appointment_schema import TurnoActualizar, TurnoCrear
-from app.services.whatsapp_service import enviar_notificacion_turno
 # 🔥 Importamos tu nuevo servicio de Twilio
 
 
@@ -263,7 +262,6 @@ def crear_turno(db: Session, turno: TurnoCrear, background_tasks: BackgroundTask
             # Encolamos la tarea. FastAPI va a responder el HTTP 201 inmediatamente 
             # y en paralelo ejecutará esto sin trabar al usuario.
             background_tasks.add_task(
-                enviar_notificacion_turno,
                 telefono_cliente=cliente.telefono,
                 nombre_cliente=nombre_completo,
                 nombre_negocio=nombre_negocio,
