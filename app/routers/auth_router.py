@@ -84,8 +84,7 @@ def verify_email_endpoint(
     token: str,
     db: Session = Depends(get_db),
 ):
-    verify_email(db, token)
-
-    return RedirectResponse(
-        url="https://www.turnogo.app/login"
+    return verify_email(
+        db,
+        token,
     )

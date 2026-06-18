@@ -15,7 +15,7 @@ def send_verification_email(
     token: str,
 ):
     verification_link = (
-    f"{BACKEND_URL}/api/auth/verify-email/{token}"
+    f"{FRONTEND_URL}/verify-email/{token}"
     )   
 
     params = {
