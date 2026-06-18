@@ -295,6 +295,15 @@ def verify_email(
 
     db.commit()
 
+    access_token = create_access_token(
+        data={
+            "sub": str(usuario.id_us)
+        }
+    )
+
     return {
-        "message": "Email verificado correctamente"
+        "message": "Email verificado correctamente",
+        "access_token": access_token,
+        "token_type": "bearer",
+        "usuario_id": usuario.id_us,
     }
