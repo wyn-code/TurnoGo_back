@@ -55,6 +55,12 @@ def create_app():
             {"id": 1, "name": "Peluquería", "icon": "scissors"},
             {"id": 2, "name": "Spa", "icon": "sparkles"},
         ]
+    
+    @app.get("/test")
+    def test():
+        return {
+        "message": "Backend funcionando v2 🚀"
+    }
 
     app.include_router(usuario_router, prefix="/api", tags=["Usuarios"])
     app.include_router(auth_router, prefix="/api")

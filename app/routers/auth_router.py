@@ -88,3 +88,4 @@ def verify_email_endpoint(
         db,
         token,
     )
+
