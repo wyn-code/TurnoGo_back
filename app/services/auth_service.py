@@ -28,6 +28,9 @@ from app.schemas.auth_schema import (
     TokenResponse,
 )
 
+from datetime import timedelta
+from app.core.config import ACCESS_TOKEN_EXPIRE_MINUTES
+
 
 PASSWORD_REGEX = (
     r"^(?=.*[a-z])"
@@ -261,6 +264,7 @@ def reset_password(
         "message": "Contraseña actualizada"
     }
 
+
 def verify_email(
     db: Session,
     token: str,
@@ -296,9 +300,10 @@ def verify_email(
     db.commit()
 
     access_token = create_access_token(
-        data={
-            "sub": str(usuario.id_us)
-        }
+        subject=usuario.id_us,
+        expires_delta=timedelta(
+            minutes=ACCESS_TOKEN_EXPIRE_MINUTES
+        )
     )
 
     return {
