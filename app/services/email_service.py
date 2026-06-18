@@ -3,6 +3,8 @@ import resend
 from app.core.config import (
     RESEND_API_KEY,
     FRONTEND_URL,
+    BACKEND_URL,
+
 )
 
 resend.api_key = RESEND_API_KEY
@@ -13,8 +15,8 @@ def send_verification_email(
     token: str,
 ):
     verification_link = (
-        f"{FRONTEND_URL}/verify-email/{token}"
-    )
+    f"{BACKEND_URL}/api/auth/verify-email/{token}"
+    )   
 
     params = {
         "from": "TurnoGo <contacto@turnogo.app>",

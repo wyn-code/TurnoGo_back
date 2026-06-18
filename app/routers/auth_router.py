@@ -21,6 +21,8 @@ from fastapi import (
 from app.core.dependencies import get_current_user, get_db
 from app.models.usuario import Usuario
 from app.schemas.auth_schema import AuthResponse, LoginRequest, RegisterRequest, TokenResponse
+from fastapi.responses import RedirectResponse
+
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -82,7 +84,8 @@ def verify_email_endpoint(
     token: str,
     db: Session = Depends(get_db),
 ):
-    return verify_email(
-        db,
-        token,
+    verify_email(db, token)
+
+    return RedirectResponse(
+        url="https://www.turnogo.app/login"
     )
