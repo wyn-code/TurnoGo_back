@@ -9,14 +9,14 @@ class Usuario(Base):
 
     id_us = Column(Integer, primary_key=True, index=True)
 
-    usuario_us = Column(String(30), nullable=False, unique=True)
-    email_us = Column(String(50), nullable=False, unique=True)
+    usuario_us = Column(String(50), nullable=False, unique=True)
+    email_us = Column(String(100), nullable=False, unique=True, index=True)
 
     contrasena_us = Column(String(255), nullable=False)
 
     role = Column(String(20), default="duenio")
 
-    created_at = Column(DateTime, default=datetime.now)
+    created_at = Column(DateTime, default=datetime.now, nullable=False)
 
     # RECUPERAR PASSWORD
     reset_token = Column(String(255), nullable=True)
@@ -24,7 +24,8 @@ class Usuario(Base):
 
     negocio = relationship(
         "Negocio",
-        back_populates="usuario"
+        back_populates="usuario",
+        uselist=False,
     )
 
     email_verified = Column(
