@@ -23,3 +23,22 @@ class UsuarioResponse(UsuarioBase):
     created_at: Optional[datetime] = None
     role: str 
     model_config = ConfigDict(from_attributes=True)
+    estado: bool
+
+class UsuarioAdminResponse(BaseModel):
+    id_us: int
+    usuario_us: str
+    email_us: str
+
+    role_us: str | None = None
+
+    habilitado: bool = True
+
+    negocio: str | None = None
+
+    estado: bool
+
+    
+
+class EstadoUsuarioRequest(BaseModel):
+    estado: bool

@@ -117,7 +117,9 @@ class NegocioAdminResponse(BaseModel):
     ig_url: str | None
     activo: bool
     slug: str
+
     duenio: DuenioResponse
+
     model_config = ConfigDict(from_attributes=True)
 
 

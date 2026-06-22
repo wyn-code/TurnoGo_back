@@ -18,6 +18,8 @@ class Usuario(Base):
 
     created_at = Column(DateTime, default=datetime.now, nullable=False)
 
+    estado = Column(Boolean, nullable=True, default=False)
+
     # RECUPERAR PASSWORD
     reset_token = Column(String(255), nullable=True)
     reset_token_expiration = Column(DateTime, nullable=True)

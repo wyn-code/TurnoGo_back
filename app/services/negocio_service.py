@@ -54,15 +54,33 @@ def listar_negocios(db: Session):
 
 
 def listar_negocios_admin(db: Session):
-    return (
+    negocios = (
         db.query(Negocio)
         .options(
             joinedload(Negocio.categoria),
             joinedload(Negocio.usuario),
         )
-        .filter(Negocio.activo == True)
         .all()
     )
+
+    return [
+        {
+            "id_negocio": n.id_negocio,
+            "nombre": n.nombre,
+            "wsp": n.wsp,
+            "telefono": n.telefono,
+            "direccion": n.direccion,
+            "ciudad": n.ciudad,
+            "ig_url": n.ig_url,
+            "activo": n.activo,
+            "slug": n.slug,
+            "duenio": {
+                "nombre": n.usuario.usuario_us,
+                "email": n.usuario.email_us,
+            },
+        }
+        for n in negocios
+    ]
 
 
 def obtener_negocio_por_id(db: Session, negocio_id: int):

@@ -9,6 +9,8 @@ from app.services.email_service import (
 from app.core.security import get_password_hash
 from app.models.usuario import Usuario
 from app.schemas.usuario_schema import UsuarioCreate, UsuarioUpdate
+from sqlalchemy.orm import joinedload
+from app.models.negocio import Negocio
 
 
 def ver_usuarios(db: Session):
@@ -112,3 +114,50 @@ def borrar_usuario(db: Session, usuario_id: int):
     db.delete(usuario_db)
     db.commit()
     return usuario_db
+
+
+def ver_usuarios_admin(db: Session):
+    usuarios = (
+        db.query(Usuario)
+        .options(joinedload(Usuario.negocio))
+        .all()
+    )
+
+    return [
+    {
+        "id_us": u.id_us,
+        "usuario_us": u.usuario_us,
+        "email_us": u.email_us,
+        "role_us": u.role,
+        "estado": u.estado,
+        "negocio": ", ".join(
+            n.nombre for n in u.negocio
+        ),
+    }
+    for u in usuarios
+]
+
+def cambiar_estado_usuario(
+    db: Session,
+    usuario_id: int,
+    estado: bool
+):
+    usuario = (
+        db.query(Usuario)
+        .filter(Usuario.id_us == usuario_id)
+        .first()
+    )
+
+    if not usuario:
+        raise HTTPException(
+            status_code=404,
+            detail="Usuario no encontrado"
+        )
+
+    usuario.estado = estado
+
+    db.commit()
+    db.refresh(usuario)
+
+    return usuario
+
