@@ -23,6 +23,10 @@ class ServicioCreate(ServicioBase):
     id_negocio: int # Necesitamos saber a qué negocio pertenece el servicio
 
 
+class ServicioCreateNested(ServicioBase):
+    pass
+
+
 class ServicioResponse(ServicioBase):
     id_servicio: int
     id_negocio: int

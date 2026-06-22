@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.horarios_negocio_schema import HorarioNegocioCreate, HorarioNegocioResponse
 from app.schemas.servicio_schema import (
-    ServicioCreate,
+    ServicioCreateNested,
     ServicioResponse
 )
 
@@ -34,8 +34,7 @@ class NegocioBase(BaseModel):
 
 
 class NegocioCreate(NegocioBase):
-    usuario_id: int
-    id_categoria: int
+    usuario_id: int | None = None
 
 
 class NegocioImagenResponse(BaseModel):
@@ -72,7 +71,7 @@ class NegocioResponse(NegocioListResponse):
 
 class NegocioCompleteCreate(NegocioCreate):
     imagenes: list[str] = Field(default_factory=list)
-    servicios: list[ServicioCreate] = Field(default_factory=list)
+    servicios: list[ServicioCreateNested] = Field(default_factory=list)
     empleados: list[EmpleadoCreate] = Field(default_factory=list)
     horarios: list[HorarioNegocioCreate] = Field(default_factory=list)
 
