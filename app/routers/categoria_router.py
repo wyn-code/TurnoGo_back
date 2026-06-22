@@ -32,6 +32,8 @@ def obtener(categoria_id: int, db: Session = Depends(get_db)):
 def crear(data: CategoriaCreate, db: Session = Depends(get_db)):
     try:
         return categoria_service.crear_categoria(db, data)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
     except IntegrityError:
         db.rollback()
         raise HTTPException(
@@ -44,7 +46,17 @@ def crear(data: CategoriaCreate, db: Session = Depends(get_db)):
 def actualizar(
     categoria_id: int, data: CategoriaUpdate, db: Session = Depends(get_db)
 ):
-    row = categoria_service.actualizar_categoria(db, categoria_id, data)
+    try:
+        row = categoria_service.actualizar_categoria(db, categoria_id, data)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Ya existe una categoria con ese nombre",
+        )
+
     if not row:
         raise HTTPException(status_code=404, detail="Categoria no encontrada")
     return row
