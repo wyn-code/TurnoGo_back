@@ -47,6 +47,20 @@ def post_negocio(
     return negocio_service.crear_negocio_completo(db, data)
 
 
+@router.post(
+    "/complete",
+    response_model=NegocioCompleteResponse,
+    status_code=status.HTTP_201_CREATED,
+    include_in_schema=False,
+)
+def post_negocio_completo(
+    data: NegocioCompleteCreate,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    return post_negocio(data, db, current_user)
+
+
 @router.get("/slug/{slug}", response_model=NegocioResponse)
 def ver_negocio_por_slug(slug: str, db: Session = Depends(get_db)):
     negocio = negocio_service.obtener_negocio_por_slug(db, slug)
@@ -62,18 +76,6 @@ def ver_negocio_por_id(
 ):
     return negocio_service.obtener_negocio_publico_por_id(db, negocio_id)
 
-
-@router.post("/complete", response_model=NegocioCompleteResponse, status_code=status.HTTP_201_CREATED)
-def post_negocio_completo(
-    data: NegocioCompleteCreate,
-    db: Session = Depends(get_db),
-    current_user: Usuario = Depends(get_current_user),
-):
-    if data.id_categoria is None:
-        raise HTTPException(status_code=400, detail="id_categoria es obligatorio")
-
-    data.usuario_id = current_user.id_us
-    return negocio_service.crear_negocio_completo(db, data)
 
 @router.put("/{negocio_id}", response_model=NegocioResponse)
 def update_negocio(
