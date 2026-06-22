@@ -27,7 +27,6 @@ class Usuario(Base):
     negocio = relationship(
         "Negocio",
         back_populates="usuario",
-        uselist=False,
     )
 
     email_verified = Column(
