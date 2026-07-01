@@ -8,3 +8,6 @@ from .localidad import Localidad
 from .negocio import Negocio
 from .negocio_imagen import NegocioImagen
 from .empleado import Empleado
+from .plan import Plan
+from .plan_feature import PlanFeature
+from .suscripcion import Suscripcion

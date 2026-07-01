@@ -2,6 +2,8 @@ import re
 import logging
 from fastapi import HTTPException
 from sqlalchemy.orm import Session, joinedload, selectinload
+from app.models.localidad import Localidad
+from app.models.provincia import Provincia
 from app.models.negocio import Negocio
 from app.models.usuario import Usuario
 from app.models.servicio import Servicio
@@ -11,6 +13,12 @@ from app.models.negocio_imagen import NegocioImagen
 from app.services.mapbox_service import obtener_coordenadas
 from app.schemas.negocio_schema import NegocioCompleteCreate
 from app.models.horarios_negocio import HorarioNegocio
+from app.services.plan_service import negocio_tiene_funcion
+from app.models.suscripcion import Suscripcion
+from app.models.plan_feature import PlanFeature
+from app.models.plan import Plan
+from datetime import datetime
+
 
 
 logger = logging.getLogger(__name__)
@@ -39,10 +47,16 @@ def obtener_negocios_mapa(db: Session):
             Negocio.latitud,
             Negocio.longitud,
         )
+        .join(Suscripcion, Suscripcion.id_negocio == Negocio.id_negocio)
+        .join(Plan, Plan.id_plan == Suscripcion.id_plan)
+        .join(PlanFeature, PlanFeature.id_plan == Plan.id_plan)
         .filter(
             Negocio.latitud.isnot(None),
             Negocio.longitud.isnot(None),
-            Negocio.activo == True
+            Negocio.activo == True,
+            Suscripcion.estado == "activa",
+            Suscripcion.fecha_fin >= datetime.now(),
+            PlanFeature.feature_key == "mapa_ubicacion",
         )
         .all()
     )
@@ -121,12 +135,13 @@ def obtener_negocio_publico_por_id(db: Session, negocio_id: int):
 
     return negocio
 
+
 def obtener_negocio_por_slug(db: Session, slug: str):
     negocio = db.query(Negocio).options(
         joinedload(Negocio.categoria),
         selectinload(Negocio.horarios),
-        selectinload(Negocio.imagenes), 
-        ).filter(
+        selectinload(Negocio.imagenes),
+    ).filter(
         Negocio.slug == slug,
         Negocio.activo == True
     ).first()
@@ -135,7 +150,7 @@ def obtener_negocio_por_slug(db: Session, slug: str):
             status_code=404,
             detail="Negocio no encontrado"
         )
-    
+
     return negocio
 
 
@@ -163,7 +178,8 @@ def crear_negocio_completo(db: Session, data: NegocioCompleteCreate):
     if not data.usuario_id:
         raise HTTPException(400, "usuario_id es obligatorio")
 
-    usuario = db.query(Usuario).filter(Usuario.id_us == data.usuario_id).first()
+    usuario = db.query(Usuario).filter(
+        Usuario.id_us == data.usuario_id).first()
     if not usuario:
         raise HTTPException(400, "Usuario no válido")
 
@@ -177,19 +193,30 @@ def crear_negocio_completo(db: Session, data: NegocioCompleteCreate):
     if not categoria:
         raise HTTPException(400, "Categoría no válida")
 
+    localidad = db.query(Localidad).filter(
+        Localidad.id_localidad == data.id_localidad
+    ).first()
+
+    provincia = db.query(Provincia).filter(
+        Provincia.id_provincia == data.id_provincia
+    ).first()
+
     # 🔥 GEOCODING MEJORADO
     latitud, longitud = None, None
 
     try:
         if data.direccion:
             coords = obtener_coordenadas(
-                direccion=f"{data.direccion}, {data.ciudad or ''}, Argentina",
-                ciudad=data.ciudad,
-                provincia=str(data.id_provincia) if data.id_provincia else None
+                direccion=data.direccion,
+                ciudad=localidad.nombre if localidad else None,
+                provincia=provincia.nombre if provincia else None,
             )
 
             if coords:
                 latitud, longitud = coords
+
+            print("LATITUD:", latitud)
+            print("LONGITUD:", longitud)
 
     except Exception:
         logger.exception("Error obteniendo coordenadas desde Mapbox")
@@ -202,7 +229,7 @@ def crear_negocio_completo(db: Session, data: NegocioCompleteCreate):
         wsp=data.wsp,
         telefono=data.telefono,
         direccion=data.direccion,
-        ciudad=data.ciudad,
+        ciudad=localidad.nombre if localidad else data.ciudad,
         id_localidad=data.id_localidad,
         id_provincia=data.id_provincia,
         ig_url=data.ig_url,
@@ -219,7 +246,8 @@ def crear_negocio_completo(db: Session, data: NegocioCompleteCreate):
         db.add(nuevo_negocio)
         db.flush()
 
-        imagenes = [url.strip() for url in (data.imagenes or []) if url and url.strip()]
+        imagenes = [url.strip()
+                    for url in (data.imagenes or []) if url and url.strip()]
         for index, url in enumerate(imagenes):
             db.add(NegocioImagen(
                 id_negocio=nuevo_negocio.id_negocio,
@@ -259,8 +287,10 @@ def crear_negocio_completo(db: Session, data: NegocioCompleteCreate):
         logger.exception(f"Error creando negocio completo: {e}")
 
         raise HTTPException(500, "Error al crear el negocio")
-    
+
  # 🔥 UPDATE NEGOCIO
+
+
 def actualizar_negocio(db: Session, negocio_id: int, data, current_user: Usuario):
 
     negocio = (
@@ -283,7 +313,6 @@ def actualizar_negocio(db: Session, negocio_id: int, data, current_user: Usuario
         categoria = db.query(Categoria).filter(
             Categoria.id_categoria == update_data["id_categoria"]
         ).first()
-
         if not categoria:
             raise HTTPException(400, "Categoría no válida")
 
@@ -295,6 +324,13 @@ def actualizar_negocio(db: Session, negocio_id: int, data, current_user: Usuario
             setattr(negocio, k, v)
 
     if imagenes is not None:
+        # ── NUEVO: solo negocios VIP pueden subir imágenes personalizadas ──
+        if not negocio_tiene_funcion(negocio.id_negocio, "imagenes_personalizadas", db):
+            raise HTTPException(
+                status_code=403,
+                detail="Tu plan actual no incluye imágenes personalizadas. Actualizá al plan VIP.",
+            )
+        # ────────────────────────────────────────────────────────────────────
         urls = [url.strip() for url in imagenes if url and url.strip()]
         negocio.imagenes = [
             NegocioImagen(
@@ -305,23 +341,26 @@ def actualizar_negocio(db: Session, negocio_id: int, data, current_user: Usuario
             for index, url in enumerate(urls)
         ]
 
-    # 🔥 geocoding solo si cambió ubicación real
     if (
         negocio.direccion != old_direccion or
         negocio.ciudad != old_ciudad
     ):
+        localidad = db.query(Localidad).filter(
+            Localidad.id_localidad == negocio.id_localidad
+        ).first()
+        provincia = db.query(Provincia).filter(
+            Provincia.id_provincia == negocio.id_provincia
+        ).first()
         coords = obtener_coordenadas(
-            direccion=f"{negocio.direccion}, {negocio.ciudad}, Argentina",
-            ciudad=negocio.ciudad,
-            provincia=str(negocio.id_provincia)
+            direccion=negocio.direccion,
+            ciudad=localidad.nombre if localidad else negocio.ciudad,
+            provincia=provincia.nombre if provincia else None,
         )
-
         if coords:
             negocio.latitud, negocio.longitud = coords
 
     db.commit()
     db.refresh(negocio)
-
     return negocio
 
 
@@ -342,16 +381,34 @@ def eliminar_negocio(db: Session, negocio_id: int, current_user: Usuario):
     db.commit()
 
 #
+
+
 def backfill_negocios(db: Session):
     negocios = db.query(Negocio).all()
 
     for n in negocios:
         updated = False
 
-        # 1. coordenadas (único dato realmente reconstruible)
-        if not n.latitud or not n.longitud:
+        # 1. Coordenadas
+        if n.latitud is None or n.longitud is None:
+
+            localidad = None
+            provincia = None
+
+            if n.id_localidad:
+                localidad = db.query(Localidad).filter(
+                    Localidad.id_localidad == n.id_localidad
+                ).first()
+
+            if localidad:
+                provincia = db.query(Provincia).filter(
+                    Provincia.id_provincia == localidad.id_provincia
+                ).first()
+
             coords = obtener_coordenadas(
-                f"{n.direccion}, {n.ciudad}, Argentina"
+                direccion=n.direccion,
+                ciudad=localidad.nombre if localidad else n.ciudad,
+                provincia=provincia.nombre if provincia else None,
             )
 
             if coords:

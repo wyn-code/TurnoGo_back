@@ -15,9 +15,11 @@ from app.services import negocio_service
 
 router = APIRouter(prefix="/negocios", tags=["Negocios"])
 
+
 @router.post("/admin/rebuild-data")
 def rebuild(db: Session = Depends(get_db)):
     return negocio_service.backfill_negocios(db)
+
 
 @router.get("/mapa", response_model=list[NegocioMapaResponse])
 def mapa(db: Session = Depends(get_db)):
@@ -41,7 +43,8 @@ def post_negocio(
     current_user: Usuario = Depends(get_current_user),
 ):
     if data.id_categoria is None:
-        raise HTTPException(status_code=400, detail="id_categoria es obligatorio")
+        raise HTTPException(
+            status_code=400, detail="id_categoria es obligatorio")
 
     data.usuario_id = current_user.id_us
     return negocio_service.crear_negocio_completo(db, data)
@@ -91,6 +94,7 @@ def update_negocio(
         current_user=current_user
     )
 
+
 @router.delete("/{negocio_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_negocio(
     negocio_id: int,
@@ -100,4 +104,12 @@ def delete_negocio(
     negocio_service.eliminar_negocio(db, negocio_id, current_user)
 
 
+@router.post("/backfill-coordenadas")
+def ejecutar_backfill(
+    db: Session = Depends(get_db)
+):
+    negocio_service.backfill_negocios(db)
 
+    return {
+        "mensaje": "Coordenadas actualizadas"
+    }

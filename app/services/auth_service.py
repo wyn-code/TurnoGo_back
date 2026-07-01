@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 import secrets
 import re
 
@@ -28,7 +28,6 @@ from app.schemas.auth_schema import (
     TokenResponse,
 )
 
-from datetime import timedelta
 from app.core.config import ACCESS_TOKEN_EXPIRE_MINUTES
 
 
@@ -64,8 +63,8 @@ def register_user(db: Session, data: RegisterRequest) -> Usuario:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
                 "La contraseña debe tener entre 12 y 16 caracteres, "
-                "incluyendo al menos una mayúscula, una minúscula, "
-                "un número y un carácter especial"
+                "incluyendo mayúscula, minúscula, número "
+                "y un carácter especial"
             ),
         )
 
@@ -81,7 +80,7 @@ def register_user(db: Session, data: RegisterRequest) -> Usuario:
         email_verified=False,
         verification_token=verification_token,
         verification_token_expiration=(
-            datetime.utcnow() + timedelta(hours=24)
+            datetime.now() + timedelta(hours=24)
         ),
     )
 
@@ -160,8 +159,7 @@ def forgot_password(
     db: Session,
     email: str,
 ):
-    print("Entró a forgot_password")
-    print("Email recibido:", email)
+
 
     usuario = (
         db.query(Usuario)
@@ -171,7 +169,6 @@ def forgot_password(
         .first()
     )
 
-    print("Usuario encontrado:", usuario)
 
     if not usuario:
         print("NO EXISTE EL USUARIO")
@@ -183,23 +180,18 @@ def forgot_password(
 
     token = secrets.token_urlsafe(32)
 
-    print("Token generado:", token)
 
     usuario.reset_token = token
     usuario.reset_token_expiration = (
-        datetime.utcnow() + timedelta(hours=1)
+        datetime.now(UTC) + timedelta(hours=1)
     )
 
     db.commit()
-
-    print("Antes de enviar email")
 
     send_reset_password_email(
         usuario.email_us,
         token,
     )
-
-    print("Después de enviar email")
 
     return {
         "message": (
@@ -230,7 +222,7 @@ def reset_password(
     if (
         usuario.reset_token_expiration is None
         or usuario.reset_token_expiration
-        < datetime.utcnow()
+        < datetime.now()
     ):
         raise HTTPException(
             status_code=400,
@@ -286,7 +278,7 @@ def verify_email(
     if (
         usuario.verification_token_expiration is None
         or usuario.verification_token_expiration
-        < datetime.utcnow()
+        < datetime.now()
     ):
         raise HTTPException(
             status_code=400,
