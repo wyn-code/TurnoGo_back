@@ -5,6 +5,10 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
+from app.models.negocio import Negocio
+
+from app.services import plan_service
+
 from app.core.config import ALGORITHM, SECRET_KEY
 from app.db.database import SessionLocal
 from app.models.usuario import Usuario
@@ -47,3 +51,35 @@ def get_current_user(
         raise credentials_exception
 
     return usuario
+
+
+def get_current_negocio(
+    current_user: Usuario = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Negocio:
+    negocio = db.query(Negocio).filter(
+        Negocio.usuario_id == current_user.id_us
+    ).first()
+
+    if negocio is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="El usuario no tiene un negocio registrado",
+        )
+
+    return negocio
+
+
+def require_feature(feature_key: str):
+    def dependency(
+        negocio: Negocio = Depends(get_current_negocio),
+        db: Session = Depends(get_db),
+    ):
+        if not plan_service.negocio_tiene_funcion(negocio.id_negocio, feature_key, db):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Tu plan actual no incluye acceso a esta función. Actualizá al plan VIP para habilitarla.",
+            )
+        return negocio
+
+    return dependency

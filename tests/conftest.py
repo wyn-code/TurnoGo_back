@@ -3,7 +3,6 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
-from app.main import app, create_app
 from app.db.base import Base
 from app.core.dependencies import get_db as get_db_core
 from app.db.session import get_db as get_db_session
@@ -39,6 +38,9 @@ def setup_db():
     from app.models.empleado import Empleado
     from app.models.provincia import Provincia
     from app.models.localidad import Localidad
+    from app.models.plan import Plan
+    from app.models.plan_feature import PlanFeature
+    from app.models.suscripcion import Suscripcion
 
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)

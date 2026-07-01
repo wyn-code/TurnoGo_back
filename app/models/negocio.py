@@ -14,8 +14,8 @@ class Negocio(Base):
     telefono = Column(String(20), nullable=True)
     direccion = Column(String(200), nullable=False)
     ciudad = Column(String(100), nullable=False)
-    id_localidad = Column(Integer, ForeignKey("localidad.id_localidad", ondelete="SET NULL"), nullable=True)
-    id_provincia = Column(Integer, ForeignKey("provincias.id_provincia", ondelete="SET NULL"), nullable=True)
+    id_localidad = Column(Integer, ForeignKey("localidades.id_localidad", ondelete="SET NULL"), nullable=True)
+    id_provincia = Column(Integer, ForeignKey("provincia.id_provincia", ondelete="SET NULL"), nullable=True)
     ig_url = Column(String(200), nullable=True)
     slug = Column(String(150), unique=True, nullable=False, index=True)
     logo = Column(String(255), nullable=True)
@@ -32,5 +32,5 @@ class Negocio(Base):
     usuario = relationship("Usuario", back_populates="negocio")
     categoria = relationship("Categoria", back_populates="negocios")
     horarios = relationship("HorarioNegocio", back_populates="negocio", cascade="all, delete-orphan")
-    imagenes = relationship("NegocioImagen",back_populates="negocio",cascade="all, delete-orphan", order_by="NegocioImagen.orden",
-    )
+    imagenes = relationship("NegocioImagen",back_populates="negocio",cascade="all, delete-orphan", order_by="NegocioImagen.orden",)
+    suscripciones = relationship("Suscripcion", back_populates="negocio")
