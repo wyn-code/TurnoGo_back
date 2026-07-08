@@ -1,5 +1,6 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
+from typing import Literal
 
 
 class PlanResponse(BaseModel):
@@ -10,6 +11,7 @@ class PlanResponse(BaseModel):
     descripcion: str | None = None
     activo: bool
     model_config = ConfigDict(from_attributes=True)
+    feature_keys: list[str]
 
 
 class SuscripcionResponse(BaseModel):
@@ -27,4 +29,19 @@ class NegocioFuncionesResponse(BaseModel):
     plan: str | None          
     estado: str | None        
     fecha_fin: datetime | None
-    funciones: list[str]      
+    funciones: list[str]
+
+
+# ─── Pagos / MercadoPago ──────────────────────────────────────────────
+
+class CrearPreferenciaRequest(BaseModel):
+    id_plan: int
+
+
+class CrearPreferenciaResponse(BaseModel):
+    init_point: str
+    preference_id: str
+
+
+class RenovacionAutomaticaRequest(BaseModel):
+    renovacion_automatica: bool      

@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from app.models.plan import Plan
 from app.models.plan_feature import PlanFeature
 from app.models.suscripcion import Suscripcion
-from tests.auth import obtener_token
+from tests.auth_helpers import obtener_token
 
 
 def _headers_duenio_negocio(client):

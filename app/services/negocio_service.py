@@ -215,9 +215,6 @@ def crear_negocio_completo(db: Session, data: NegocioCompleteCreate):
             if coords:
                 latitud, longitud = coords
 
-            print("LATITUD:", latitud)
-            print("LONGITUD:", longitud)
-
     except Exception:
         logger.exception("Error obteniendo coordenadas desde Mapbox")
 

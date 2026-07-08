@@ -69,14 +69,10 @@ def crear_usuario(db: Session, usuario: UsuarioCreate):
     db.commit()
     db.refresh(nuevo_usuario)
 
-    print("Enviando email de verificación...")
-
     send_verification_email(
         nuevo_usuario.email_us,
         verification_token,
     )
-
-    print("Email enviado")
 
     return nuevo_usuario
 

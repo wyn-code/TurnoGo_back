@@ -19,6 +19,5 @@ SessionLocal = sessionmaker(
 try:
     with engine.connect() as connection:
         connection.execute(text("SELECT 1"))
-        print("Conexión a PostgreSQL exitosa")
 except OperationalError as e:
-    print("error de conexión:", e)
+    pass

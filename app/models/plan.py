@@ -1,7 +1,6 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Numeric, DateTime
+from sqlalchemy import Boolean, Column, Integer, String, Numeric
 from sqlalchemy.orm import relationship
 from app.db.base import Base
-from datetime import datetime
 
 
 class Plan(Base):
@@ -16,3 +15,7 @@ class Plan(Base):
 
     funciones = relationship("PlanFeature", back_populates="plan", cascade="all, delete-orphan")
     suscripciones = relationship("Suscripcion", back_populates="plan")
+
+    @property
+    def feature_keys(self) -> list[str]:
+        return [pf.feature_key for pf in self.funciones]

@@ -19,11 +19,11 @@ def send_verification_email(
     )   
 
     params = {
-        "from": "TurnoGo <contacto@turnogo.app>",
+        "from": "Turnogo <contacto@turnogo.app>",
         "to": [email],
         "subject": "Verificá tu cuenta",
         "html": f"""
-            <h2>Bienvenido a TurnoGo</h2>
+            <h2>Bienvenido a Turnogo</h2>
 
             <p>
                 Hacé click en el siguiente enlace
@@ -40,14 +40,7 @@ def send_verification_email(
         """,
     }
 
-    print("=== ENVIANDO EMAIL ===")
-    print("Destinatario:", email)
-    print("Link:", verification_link)
-
     response = resend.Emails.send(params)
-
-    print("=== RESPUESTA RESEND ===")
-    print(response)
 
     return response
 

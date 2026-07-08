@@ -1,26 +1,29 @@
-# 📅 Sistema de Turnos SaaS
+# 📅 Turnogo — Sistema de Turnos SaaS
 
 Aplicación web full stack para la gestión de turnos, desarrollada como proyecto final de la Tecnicatura Universitaria en Programación (UTN).
 
-![Dashboard del Sistema](./screenshot/dashboard.png)
+![Dashboard del Sistema](./docs/screenshot/dashboard.png)
 
 ---
 
 ## 🚀 Tecnologías utilizadas
 
 **Frontend**
+
 - React.js & TypeScript
 - Gestión de estado y Hooks
 - CSS Moderno / Tailwind (si aplica)
 
 **Backend**
+
 - Python 3
 - FastAPI (Framework de alto rendimiento)
 - SQLAlchemy (ORM)
 - Pydantic (Validación de datos)
 
 **Base de datos & Infraestructura**
-- SQL Server / Supabase
+
+- PostgreSQL (Supabase)
 - Docker & Docker Compose
 - Git / GitHub
 
@@ -38,16 +41,16 @@ Aplicación web full stack para la gestión de turnos, desarrollada como proyect
 
 ## 📸 Capturas de pantalla
 
-| Vista de Negocio | Gestión de Turnos |
-|---|---|
-| ![Negocio](./screenshot/crearNegocio.png) | ![Turnos](./screenshot/dashboard.png) |
-
+| Vista de Negocio                               | Gestión de Turnos                          |
+| ---------------------------------------------- | ------------------------------------------ |
+| ![Negocio](./docs/screenshot/crearNegocio.png) | ![Turnos](./docs/screenshot/dashboard.png) |
 
 ---
 
 ## 🗂️ Estructura del proyecto
 
 ### 🖥️ Backend (FastAPI)
+
 ```
 app/
 ├── core/           # Configuración, seguridad y constantes
@@ -60,6 +63,7 @@ app/
 ```
 
 ### 🎨 Frontend (React + TS)
+
 ```
 src/
 ├── api/            # Configuración de Axios/Fetch
@@ -73,15 +77,15 @@ src/
 
 ## 📖 API — Endpoints principales
 
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| POST | `/api/usuarios` | Registro de usuario |
-| POST | `/api/auth/login` | Login y obtención de token |
-| GET | `/api/turnos` | Listar turnos del usuario |
-| POST | `/api/turnos` | Crear nuevo turno |
-| PUT | `/api/turnos/{turnos_id}` | Modificar turno |
-| DELETE | `/api/turnos/{turnos_id}` | Cancelar turno |
-| POST | `/api/negocio/complete` | Crear negocio |
+| Método | Endpoint                  | Descripción                |
+| ------ | ------------------------- | -------------------------- |
+| POST   | `/api/usuarios`           | Registro de usuario        |
+| POST   | `/api/auth/login`         | Login y obtención de token |
+| GET    | `/api/turnos`             | Listar turnos del usuario  |
+| POST   | `/api/turnos`             | Crear nuevo turno          |
+| PUT    | `/api/turnos/{turnos_id}` | Modificar turno            |
+| DELETE | `/api/turnos/{turnos_id}` | Cancelar turno             |
+| POST   | `/api/negocio/complete`   | Crear negocio              |
 
 ---
 
@@ -89,16 +93,15 @@ src/
 
 Rocco Lavecchia Full Stack Developer
 
-- 📧 roccolavecchia.rl@gmail.com  
-- 💼 [LinkedIn](https://www.linkedin.com/in/rocco-lavecchia-58089917a/)  
-- 🐙 [GitHub]([https://github.com/tu-usuario](https://github.com/lavecchiarocco))
+- 📧 roccolavecchia.rl@gmail.com
+- 💼 [LinkedIn](https://www.linkedin.com/in/rocco-lavecchia-58089917a/)
+- 🐙 [GitHub](<[https://github.com/tu-usuario](https://github.com/lavecchiarocco)>)
 
 Bruno Massoco Full Stack Developer
 
 - 📧 brunoo6.massocco@gmail.com
-- 💼 [LinkedIn](linkedin.com/in/bruno-massocco-49b113307/)  
-- 🐙 [GitHub]([https://github.com/tu-usuario](https://github.com/wyn-code))
-
+- 💼 [LinkedIn](linkedin.com/in/bruno-massocco-49b113307/)
+- 🐙 [GitHub](<[https://github.com/tu-usuario](https://github.com/wyn-code)>)
 
 📄 Licencia
 Este proyecto fue desarrollado con fines educativos para la UTN.

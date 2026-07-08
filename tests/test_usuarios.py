@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 
 # 1. DUEÑO PUEDE EDITAR SU NEGOCIO
 def test_owner_puede_editar_su_negocio(client, seed_data):
-    from .auth import obtener_token
+    from tests.auth_helpers import obtener_token
 
     headers = obtener_token(client, "test1@test.com", "123456")
 
@@ -26,7 +26,7 @@ def test_owner_puede_editar_su_negocio(client, seed_data):
 
 # 2. DUEÑO NO PUEDE EDITAR NEGOCIO AJENO
 def test_owner_no_puede_editar_negocio_ajeno(client, seed_data):
-    from .auth import obtener_token
+    from tests.auth_helpers import obtener_token
 
     headers = obtener_token(client, "test2@test.com", "123456") # Usa test2
 
@@ -49,7 +49,7 @@ def test_owner_no_puede_editar_negocio_ajeno(client, seed_data):
 
 # 3. NO PUEDE BORRAR NEGOCIO AJENO
 def test_owner_no_puede_borrar_negocio_ajeno(client, seed_data):
-    from .auth import obtener_token
+    from tests.auth_helpers import obtener_token
 
     headers = obtener_token(client, "test2@test.com", "123456") # 
 
@@ -63,7 +63,7 @@ def test_owner_no_puede_borrar_negocio_ajeno(client, seed_data):
 
 # 4. NO PUEDE CREAR SERVICIO EN NEGOCIO AJENO
 def test_owner_no_puede_crear_servicio_en_negocio_ajeno(client, seed_data):
-    from .auth import obtener_token
+    from tests.auth_helpers import obtener_token
 
     headers = obtener_token(client, "test2@test.com", "123456") # 
     # <-- NOMBRES DE CAMPOS CORREGIDOS SEGÚN TU MODELO DE SERVICIO
@@ -86,7 +86,7 @@ def test_owner_no_puede_crear_servicio_en_negocio_ajeno(client, seed_data):
 
 # # 5. NO PUEDE ACCEDER DASHBOARD PRIVADO AJENO
 # def test_owner_no_puede_acceder_dashboard_privado_ajeno(client, seed_data):
-#     from .auth import obtener_token
+#     from tests.auth_helpers import obtener_token
 
 #     headers = obtener_token(client, "test2@test.com", "123456") # <-- CORREGIDO A TEST2
 

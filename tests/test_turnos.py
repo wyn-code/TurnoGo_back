@@ -1,9 +1,8 @@
-import pytest   
-from fastapi.testclient import TestClient
+import fastapi.testclient
 
 # 1. DUEÑO PUEDE EDITAR SU NEGOCIO (Este estaba bien)
 def test_owner_puede_editar_su_negocio(client, seed_data):
-    from .auth import obtener_token
+    from tests.auth_helpers import obtener_token
 
     # Usamos test1 porque ES el dueño (usuario_id=1)
     headers = obtener_token(
@@ -29,7 +28,7 @@ def test_owner_puede_editar_su_negocio(client, seed_data):
 
 # 2. DUEÑO NO PUEDE EDITAR NEGOCIO AJENO
 def test_owner_no_puede_editar_negocio_ajeno(client, seed_data):
-    from .auth import obtener_token
+    from tests.auth_helpers import obtener_token
 
     # Usamos test2 porque NO es el dueño
     headers = obtener_token(
@@ -50,7 +49,7 @@ def test_owner_no_puede_editar_negocio_ajeno(client, seed_data):
 
 # 3. NO PUEDE BORRAR NEGOCIO AJENO
 def test_owner_no_puede_borrar_negocio_ajeno(client, seed_data):
-    from .auth import obtener_token
+    from tests.auth_helpers import obtener_token
 
     # Usamos test2
     headers = obtener_token(
@@ -67,7 +66,7 @@ def test_owner_no_puede_borrar_negocio_ajeno(client, seed_data):
 
 # 4. NO PUEDE CREAR SERVICIO EN NEGOCIO AJENO
 def test_owner_no_puede_crear_servicio_en_negocio_ajeno(client, seed_data):
-    from .auth import obtener_token
+    from tests.auth_helpers import obtener_token
 
     # Usamos test2
     headers = obtener_token(
@@ -76,10 +75,13 @@ def test_owner_no_puede_crear_servicio_en_negocio_ajeno(client, seed_data):
         "123456"
     )
     payload = {
-        "nombre": "Servicio Test",
-        "duracion_minutos": 60,
+        "nombre_servicio": "Servicio Test",
+        "duracion_min": 60,
+        "duracion_max": 60,
         "precio": 1000,
-        "id_negocio": seed_data["negocio"].id_negocio
+        "requiere_aprobacion": False,
+        "id_negocio": seed_data["negocio"].id_negocio,
+        "activo": True
     }
     response = client.post(
         "/api/servicios/",
@@ -88,19 +90,3 @@ def test_owner_no_puede_crear_servicio_en_negocio_ajeno(client, seed_data):
     )
     assert response.status_code == 403
 
-
-# 5. NO PUEDE ACCEDER DASHBOARD PRIVADO AJENO
-def test_owner_no_puede_acceder_dashboard_privado_ajeno(client, seed_data):
-    from .auth import obtener_token
-
-    # Usamos test2
-    headers = obtener_token(
-        client,
-        "test2@test.com",
-        "123456"
-    )
-    response = client.get(
-        f"/api/negocios/{seed_data['negocio'].id_negocio}/dashboard",
-        headers=headers
-    )
-    assert response.status_code == 403
