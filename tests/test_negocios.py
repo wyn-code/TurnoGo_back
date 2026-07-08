@@ -1,4 +1,4 @@
-from .auth import obtener_token
+from tests.auth_helpers import obtener_token
 
 
 def headers_duenio_sin_negocio(client):

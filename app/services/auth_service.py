@@ -151,6 +151,8 @@ def build_me_response(db: Session, current_user: Usuario) -> dict:
         "email_us": current_user.email_us,
         "usuario_us": current_user.usuario_us,
         "has_business": negocio is not None,
+        "negocio_id": negocio.id_negocio if negocio else None,
+        "negocio_slug": negocio.slug if negocio else None,
         "role": current_user.role,
     }
 
@@ -171,7 +173,6 @@ def forgot_password(
 
 
     if not usuario:
-        print("NO EXISTE EL USUARIO")
         return {
             "message": (
                 "Si el email existe, se enviará un enlace"

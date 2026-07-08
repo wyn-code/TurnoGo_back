@@ -9,5 +9,17 @@ __pycache__/
 venv/
 .venv/
 
-.env
-.env
+# Bases de datos locales
+*.db
+
+# Reportes de coverage
+htmlcov/
+.coverage
+
+# Caché de pytest
+.pytest_cache/
+
+# Agentes
+.agents/
+
+

@@ -255,12 +255,8 @@ def crear_turno(db: Session, turno: TurnoCrear, background_tasks: BackgroundTask
             nombre_completo = f"{cliente.nombre} {cliente.apellido}".strip()
             
             # Traemos el nombre del negocio mediante la relación del servicio
-            nombre_negocio = servicio.negocio.nombre if hasattr(servicio, "negocio") else "TurnoGo"
+            nombre_negocio = servicio.negocio.nombre if hasattr(servicio, "negocio") else "Turnogo"
 
-            print(f"\n⏳ Encolando envío de WhatsApp en segundo plano para: {nombre_completo}")
-            
-            # Encolamos la tarea. FastAPI va a responder el HTTP 201 inmediatamente 
-            # y en paralelo ejecutará esto sin trabar al usuario.
             background_tasks.add_task(
                 telefono_cliente=cliente.telefono,
                 nombre_cliente=nombre_completo,
@@ -268,11 +264,10 @@ def crear_turno(db: Session, turno: TurnoCrear, background_tasks: BackgroundTask
                 fecha=fecha_str,
                 hora=hora_str
             )
-            print("📦 Tarea registrada con éxito en BackgroundTasks.\n")
 
-        except Exception as bg_error:
+        except Exception:
             # Si se rompe el formateo o la cola, lo capturamos para que NO rompa el commit exitoso del turno
-            print(f"⚠️ Alerta: El turno se creó pero falló la cola de WhatsApp: {bg_error}")
+            pass
 
         return nuevo_turno
 

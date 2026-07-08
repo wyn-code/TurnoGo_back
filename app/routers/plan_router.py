@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.dependencies import get_db
 
@@ -13,7 +13,7 @@ router = APIRouter(prefix="/planes", tags=["Planes"])
 
 @router.get("/", response_model=list[PlanResponse])
 def listar_planes(db: Session = Depends(get_db)):
-    return db.query(Plan).filter(Plan.activo == True).all()
+    return db.query(Plan).options(selectinload(Plan.funciones)).filter(Plan.activo == True).all()
 
 
 @router.get("/negocios/{id_negocio}/funciones", response_model=NegocioFuncionesResponse)
