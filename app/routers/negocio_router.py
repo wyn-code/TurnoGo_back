@@ -35,6 +35,16 @@ def ver_negocios(db: Session = Depends(get_db)):
 def ver_negocios_admin(db: Session = Depends(get_db)):
     return negocio_service.listar_negocios_admin(db)
 
+@router.get("/me", response_model=NegocioResponse)
+def obtener_mi_negocio(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    return negocio_service.obtener_negocio_por_usuario(
+        db,
+        current_user.id_us,
+    )
+
 
 @router.post("/", response_model=NegocioCompleteResponse, status_code=status.HTTP_201_CREATED)
 def post_negocio(

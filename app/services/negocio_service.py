@@ -135,6 +135,24 @@ def obtener_negocio_publico_por_id(db: Session, negocio_id: int):
 
     return negocio
 
+def obtener_negocio_por_usuario(
+    db: Session,
+    usuario_id: int,
+):
+    negocio = (
+        db.query(Negocio)
+        .filter(Negocio.usuario_id == usuario_id)
+        .first()
+    )
+
+    if not negocio:
+        raise HTTPException(
+            status_code=404,
+            detail="El usuario no tiene un negocio",
+        )
+
+    return negocio
+
 
 def obtener_negocio_por_slug(db: Session, slug: str):
     negocio = db.query(Negocio).options(

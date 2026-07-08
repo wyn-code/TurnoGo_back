@@ -15,6 +15,7 @@ from app.routers.cliente_router import router as cliente_router
 from app.routers.horarios_negocio_router import router as horarios_negocio_router
 from app.routers.georef_router import router as georef_router
 from app.routers.plan_router import router as plan_router 
+from app.routers.estadistica import router as estadistica_router
 
 def create_app():
     app = FastAPI(title="Turnexo")
@@ -73,6 +74,7 @@ def create_app():
     app.include_router(horarios_negocio_router, prefix="/api", tags=["Horarios"])
     app.include_router(georef_router, prefix="/api", tags=["Georef"])
     app.include_router(plan_router, prefix="/api", tags=["Planes"])
+    app.include_router(estadistica_router, prefix="/api", tags=["Estadistica"])
     return app
 
 

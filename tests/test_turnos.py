@@ -1,4 +1,4 @@
-import pytest   
+
 from fastapi.testclient import TestClient
 
 # 1. DUEÑO PUEDE EDITAR SU NEGOCIO (Este estaba bien)
