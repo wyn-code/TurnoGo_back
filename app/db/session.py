@@ -1,20 +1,5 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from app.db.database import SessionLocal
 
-from dotenv import load_dotenv
-import os
-
-load_dotenv()
-
-DATABASE_URL = os.getenv("DB")
-
-engine = create_engine(DATABASE_URL)
-
-SessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine
-)
 
 def get_db():
     db = SessionLocal()
@@ -22,4 +7,3 @@ def get_db():
         yield db
     finally:
         db.close()
-

@@ -29,13 +29,12 @@ class ForgotPasswordRequest(BaseModel):
 
 
 class ResetPasswordRequest(BaseModel):
-    token: str
     new_password: str = Field(
-        min_length=10,
-        max_length=20
+        min_length=12,
+        max_length=16
     )
     confirm_password: str = Field(
-        min_length=10,
-        max_length=20
+        min_length=12,
+        max_length=16
     )
     model_config = ConfigDict(from_attributes=True)

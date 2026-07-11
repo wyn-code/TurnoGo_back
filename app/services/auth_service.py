@@ -187,12 +187,28 @@ def forgot_password(
         datetime.now(UTC) + timedelta(hours=1)
     )
 
-    db.commit()
+    try:
+        db.commit()
+        print(f"[FORGOT-PASSWORD] Commit OK")
+    except Exception as e:
+        db.rollback()
+        print(f"[FORGOT-PASSWORD] ERROR en commit: {e}")
+        raise
 
-    send_reset_password_email(
-        usuario.email_us,
-        token,
+    verificar = (
+        db.query(Usuario)
+        .filter(Usuario.email_us == email)
+        .first()
     )
+    print(f"[FORGOT-PASSWORD] Verificacion post-commit: reset_token={verificar.reset_token}")
+
+    try:
+        send_reset_password_email(
+            usuario.email_us,
+            token,
+        )
+    except Exception as e:
+        print(f"ERROR enviando email de reset: {e}")
 
     return {
         "message": (

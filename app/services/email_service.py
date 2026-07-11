@@ -79,4 +79,16 @@ def send_reset_password_email(
         """,
     }
 
-    return resend.Emails.send(params)
+    print("=== ENVIANDO EMAIL RESET PASSWORD ===")
+    print("Destinatario:", email)
+    print("Link:", reset_link)
+
+    try:
+        response = resend.Emails.send(params)
+        print("=== RESPUESTA RESEND ===")
+        print(response)
+        return response
+    except Exception as e:
+        print(f"=== ERROR ENVIANDO EMAIL RESET PASSWORD ===")
+        print(f"Error: {e}")
+        raise

@@ -445,3 +445,257 @@ def test_verify_email_token_expirado(db):
 
     assert exc.value.status_code == 400
     assert exc.value.detail == "Token expirado"
+
+
+# ---------------- RESET PASSWORD ----------------
+
+def test_reset_password_token_expirado(db):
+
+    usuario = Usuario(
+        usuario_us="usuario_test",
+        email_us="usuario@test.com",
+        contrasena_us=get_password_hash("OldPassword123!"),
+        email_verified=True,
+        reset_token="expired-token",
+        reset_token_expiration=(
+            datetime.now() - timedelta(hours=1)
+        ),
+    )
+
+    db.add(usuario)
+    db.commit()
+
+    with pytest.raises(HTTPException) as exc:
+        auth_service.reset_password(
+            db,
+            "expired-token",
+            "NewPassword123!",
+        )
+
+    assert exc.value.status_code == 400
+    assert exc.value.detail == "Token expirado"
+
+
+def test_reset_password_contraseña_invalida(db):
+
+    usuario = Usuario(
+        usuario_us="usuario_test",
+        email_us="usuario@test.com",
+        contrasena_us=get_password_hash("OldPassword123!"),
+        email_verified=True,
+        reset_token="valid-token",
+        reset_token_expiration=(
+            datetime.now() + timedelta(hours=1)
+        ),
+    )
+
+    db.add(usuario)
+    db.commit()
+
+    with pytest.raises(HTTPException) as exc:
+        auth_service.reset_password(
+            db,
+            "valid-token",
+            "corta",
+        )
+
+    assert exc.value.status_code == 400
+
+
+def test_forgot_then_reset_then_login(db, monkeypatch):
+
+    monkeypatch.setattr(
+        auth_service,
+        "send_reset_password_email",
+        lambda *args, **kwargs: None,
+    )
+
+    usuario = Usuario(
+        usuario_us="resetflow",
+        email_us="resetflow@test.com",
+        contrasena_us=get_password_hash("OldPassword123!"),
+        email_verified=True,
+    )
+
+    db.add(usuario)
+    db.commit()
+    db.refresh(usuario)
+
+    auth_service.forgot_password(db, "resetflow@test.com")
+
+    db.refresh(usuario)
+    token = usuario.reset_token
+
+    assert token is not None
+
+    auth_service.reset_password(
+        db,
+        token,
+        "NewPassword456!",
+    )
+
+    db.refresh(usuario)
+    assert usuario.reset_token is None
+    assert verify_password("NewPassword456!", usuario.contrasena_us)
+
+    _, token_response = auth_service.login_user(
+        db,
+        LoginRequest(
+            email_us="resetflow@test.com",
+            contrasena_us="NewPassword456!",
+        ),
+    )
+
+    assert token_response.access_token is not None
+
+
+# ---------------- ENDPOINT TESTS ----------------
+
+def test_forgot_password_endpoint_ok(client, db, seed_data, monkeypatch):
+
+    monkeypatch.setattr(
+        auth_service,
+        "send_reset_password_email",
+        lambda *args, **kwargs: None,
+    )
+
+    usuario = seed_data["usuario_1"]
+
+    response = client.post(
+        "/api/auth/forgot-password",
+        json={"email_us": usuario.email_us},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["message"] == "Si el email existe, se enviará un enlace"
+
+
+def test_forgot_password_endpoint_email_no_existe(client, db):
+
+    response = client.post(
+        "/api/auth/forgot-password",
+        json={"email_us": "noexiste@test.com"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["message"] == "Si el email existe, se enviará un enlace"
+
+
+def test_reset_password_endpoint_ok(client, db, seed_data, monkeypatch):
+
+    monkeypatch.setattr(
+        auth_service,
+        "send_reset_password_email",
+        lambda *args, **kwargs: None,
+    )
+
+    usuario = seed_data["usuario_1"]
+
+    auth_service.forgot_password(db, usuario.email_us)
+    db.refresh(usuario)
+
+    response = client.post(
+        f"/api/auth/reset-password/{usuario.reset_token}",
+        json={
+            "new_password": "NuevaPass123!",
+            "confirm_password": "NuevaPass123!",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["message"] == "Contraseña actualizada"
+
+
+def test_reset_password_endpoint_contrasenas_no_coinciden(client, db, seed_data, monkeypatch):
+
+    monkeypatch.setattr(
+        auth_service,
+        "send_reset_password_email",
+        lambda *args, **kwargs: None,
+    )
+
+    usuario = seed_data["usuario_1"]
+
+    auth_service.forgot_password(db, usuario.email_us)
+    db.refresh(usuario)
+
+    response = client.post(
+        f"/api/auth/reset-password/{usuario.reset_token}",
+        json={
+            "new_password": "NuevaPass123!",
+            "confirm_password": "OtraPass45678!",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Las contraseñas no coinciden"
+
+
+def test_reset_password_endpoint_token_invalido(client, db):
+
+    response = client.post(
+        "/api/auth/reset-password/token-falso",
+        json={
+            "new_password": "NuevaPass123!",
+            "confirm_password": "NuevaPass123!",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Token inválido"
+
+
+def test_forgot_reset_login_flow_endpoint(client, db, monkeypatch):
+
+    monkeypatch.setattr(
+        auth_service,
+        "send_reset_password_email",
+        lambda *args, **kwargs: None,
+    )
+
+    register_response = client.post(
+        "/api/auth/register",
+        json={
+            "usuario_us": "flowtest",
+            "email_us": "flowtest@test.com",
+            "contrasena_us": "OldPassword123!",
+        },
+    )
+
+    assert register_response.status_code == 200
+
+    usuario = db.query(auth_service.Usuario).filter(
+        auth_service.Usuario.email_us == "flowtest@test.com"
+    ).first()
+    usuario.email_verified = True
+    db.commit()
+
+    forgot_response = client.post(
+        "/api/auth/forgot-password",
+        json={"email_us": "flowtest@test.com"},
+    )
+
+    assert forgot_response.status_code == 200
+
+    db.refresh(usuario)
+
+    reset_response = client.post(
+        f"/api/auth/reset-password/{usuario.reset_token}",
+        json={
+            "new_password": "BrandNew123456!",
+            "confirm_password": "BrandNew123456!",
+        },
+    )
+
+    assert reset_response.status_code == 200
+
+    login_response = client.post(
+        "/api/auth/login",
+        json={
+            "email_us": "flowtest@test.com",
+            "contrasena_us": "BrandNew123456!",
+        },
+    )
+
+    assert login_response.status_code == 200
+    assert "access_token" in login_response.json()

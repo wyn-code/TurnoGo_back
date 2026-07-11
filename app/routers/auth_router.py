@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.services.auth_service import (
     login_user,
@@ -6,22 +6,19 @@ from app.services.auth_service import (
     build_me_response,
     verify_email,
     forgot_password,
+    reset_password,
 )
 from app.schemas.auth_schema import (
+    AuthResponse,
     ForgotPasswordRequest,
+    LoginRequest,
+    RegisterRequest,
+    ResetPasswordRequest,
+    TokenResponse,
 )
-from app.services.email_service import (
-    send_verification_email,
-    
-)
-from fastapi import (
-    APIRouter,
-    Depends,
-)
+from app.services.email_service import send_verification_email
 from app.core.dependencies import get_current_user, get_db
 from app.models.usuario import Usuario
-from app.schemas.auth_schema import AuthResponse, LoginRequest, RegisterRequest, TokenResponse
-from fastapi.responses import RedirectResponse
 
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -75,7 +72,26 @@ def forgot_password_endpoint(
 ):
     return forgot_password(
         db,
-        request.email,
+        request.email_us,
+    )
+
+
+@router.post("/reset-password/{token}")
+def reset_password_endpoint(
+    token: str,
+    request: ResetPasswordRequest,
+    db: Session = Depends(get_db),
+):
+    if request.new_password != request.confirm_password:
+        raise HTTPException(
+            status_code=400,
+            detail="Las contraseñas no coinciden",
+        )
+
+    return reset_password(
+        db,
+        token,
+        request.new_password,
     )
 
 @router.get("/verify-email/{token}")
