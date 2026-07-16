@@ -3,8 +3,11 @@ from datetime import datetime
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from app.core.dependencies import get_current_negocio
 from app.db.session import get_db
+from app.models.negocio import Negocio
 from app.schemas.appointment_schema import (
+    CambiarEstadoTurno,
     TurnoCrear,
     TurnoActualizar,
     TurnoResponse,
@@ -15,6 +18,7 @@ from app.services.turno_service import (
     crear_turno,
     actualizar_turno,
     borrar_turno,
+    cambiar_estado_turno,
     listar_turnos_por_negocio_y_rango,
 )
 
@@ -70,4 +74,21 @@ def actualizar(turno_id: int, datos: TurnoActualizar, db: Session = Depends(get_
 @router.delete("/{turno_id}", status_code=204)
 def borrar(turno_id: int, db: Session = Depends(get_db)):
     borrar_turno(db, turno_id)
+
+
+@router.put("/{turno_id}/estado", response_model=TurnoResponse)
+def cambiar_estado(
+    turno_id: int,
+    datos: CambiarEstadoTurno,
+    background_tasks: BackgroundTasks,
+    negocio: Negocio = Depends(get_current_negocio),
+    db: Session = Depends(get_db),
+):
+    return cambiar_estado_turno(
+        db=db,
+        turno_id=turno_id,
+        datos=datos,
+        id_negocio=negocio.id_negocio,
+        background_tasks=background_tasks,
+    )
 

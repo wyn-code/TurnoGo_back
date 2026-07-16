@@ -1,4 +1,4 @@
-from sqlalchemy import Column, DateTime, ForeignKey, Text, Integer
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Text, Integer
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.db.base import Base
@@ -17,6 +17,7 @@ class Turno(Base):
     fecha_hora_inicio = Column(DateTime, nullable=False)
     fecha_hora_fin = Column(DateTime)
     rechazado_motivo = Column(Text)
+    recordatorio_enviado = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
