@@ -6,8 +6,11 @@ from app.core.config import (
     BACKEND_URL,
 
 )
+from app.services.qr_service import generar_qr_png_bytes
 
 resend.api_key = RESEND_API_KEY
+
+FROM_ADDRESS = "TurnoGo <contacto@turnogo.app>"
 
 
 def send_verification_email(
@@ -77,6 +80,164 @@ def send_reset_password_email(
                 Este enlace expirará en 1 hora.
             </p>
         """,
+    }
+
+    return resend.Emails.send(params)
+
+
+def send_cancellation_email(
+    email: str,
+    id_turno: int,
+    nombre_negocio: str,
+    nombre_servicio: str,
+    fecha: str,
+    hora: str,
+    motivo: str,
+):
+    """Send a cancellation notification email to the client."""
+    if not email:
+        return
+
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;color:#222;">
+        <h2 style="color:#dc2626;">Tu turno ha sido cancelado</h2>
+
+        <p>Lamentablemente, tu turno en <strong>{nombre_negocio}</strong>
+           ha sido cancelado por el negocio.</p>
+
+        <table style="width:100%;border-collapse:collapse;margin:16px 0;">
+            <tr>
+                <td style="padding:6px 0;color:#555;">Servicio</td>
+                <td style="padding:6px 0;font-weight:600;">{nombre_servicio}</td>
+            </tr>
+            <tr>
+                <td style="padding:6px 0;color:#555;">Fecha</td>
+                <td style="padding:6px 0;font-weight:600;">{fecha}</td>
+            </tr>
+            <tr>
+                <td style="padding:6px 0;color:#555;">Hora</td>
+                <td style="padding:6px 0;font-weight:600;">{hora}</td>
+            </tr>
+        </table>
+
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 16px;margin:16px 0;">
+            <p style="margin:0;color:#991b1b;font-weight:600;">Motivo de cancelación:</p>
+            <p style="margin:4px 0 0;color:#7f1d1d;">{motivo}</p>
+        </div>
+
+        <p style="font-size:13px;color:#666;">
+            Si tenés consultas, comunicate directamente con el negocio.
+        </p>
+
+        <hr style="border:none;border-top:1px solid #eee;margin:24px 0;" />
+        <p style="font-size:12px;color:#aaa;text-align:center;">
+            Reservado a través de TurnoGo
+        </p>
+    </div>
+    """
+
+    params = {
+        "from": FROM_ADDRESS,
+        "to": [email],
+        "subject": f"Turno cancelado en {nombre_negocio}",
+        "html": html,
+    }
+
+    return resend.Emails.send(params)
+
+
+def send_booking_confirmation_email(
+    email: str,
+    id_turno: int,
+    nombre_negocio: str,
+    nombre_servicio: str,
+    nombre_empleado: str | None,
+    fecha: str,
+    hora: str,
+    direccion: str | None,
+    telefono_negocio: str | None,
+):
+    """Send a booking confirmation email with QR to the client."""
+    if not email:
+        return
+
+    qr_bytes = generar_qr_png_bytes(id_turno)
+
+    empleado_html = (
+        f'<tr><td style="padding:6px 0;color:#555;">Profesional</td>'
+        f'<td style="padding:6px 0;font-weight:600;">{nombre_empleado}</td></tr>'
+        if nombre_empleado
+        else ""
+    )
+
+    direccion_html = (
+        f'<tr><td style="padding:6px 0;color:#555;">Dirección</td>'
+        f'<td style="padding:6px 0;font-weight:600;">{direccion}</td></tr>'
+        if direccion
+        else ""
+    )
+
+    telefono_html = (
+        f'<tr><td style="padding:6px 0;color:#555;">Teléfono</td>'
+        f'<td style="padding:6px 0;font-weight:600;">{telefono_negocio}</td></tr>'
+        if telefono_negocio
+        else ""
+    )
+
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;color:#222;">
+        <h2 style="color:#b45309;">¡Tu turno en {nombre_negocio} está confirmado!</h2>
+
+        <p>Te enviamos los datos de tu reserva junto con un código QR
+           que deberás presentar al momento de tu turno.</p>
+
+        <table style="width:100%;border-collapse:collapse;margin:16px 0;">
+            <tr>
+                <td style="padding:6px 0;color:#555;">Servicio</td>
+                <td style="padding:6px 0;font-weight:600;">{nombre_servicio}</td>
+            </tr>
+            {empleado_html}
+            <tr>
+                <td style="padding:6px 0;color:#555;">Fecha</td>
+                <td style="padding:6px 0;font-weight:600;">{fecha}</td>
+            </tr>
+            <tr>
+                <td style="padding:6px 0;color:#555;">Hora</td>
+                <td style="padding:6px 0;font-weight:600;">{hora}</td>
+            </tr>
+            {direccion_html}
+            {telefono_html}
+        </table>
+
+        <div style="text-align:center;margin:24px 0;">
+            <img src="cid:qr_turno" alt="QR del turno" style="width:180px;height:180px;" />
+            <p style="font-size:12px;color:#888;">Código QR de tu turno #{id_turno}</p>
+        </div>
+
+        <p style="font-size:13px;color:#666;">
+            Si tenés consultas, comunicate directamente con el negocio.
+        </p>
+
+        <hr style="border:none;border-top:1px solid #eee;margin:24px 0;" />
+        <p style="font-size:12px;color:#aaa;text-align:center;">
+            Reservado a través de TurnoGo
+        </p>
+    </div>
+    """
+
+    params = {
+        "from": FROM_ADDRESS,
+        "to": [email],
+        "subject": f"Turno confirmado en {nombre_negocio}",
+        "html": html,
+        "attachments": [
+            {
+                "filename": "qr_turno.png",
+                "content": list(qr_bytes),
+                "content_type": "image/png",
+                "content_id": "qr_turno",
+            }
+        ],
     }
 
     return resend.Emails.send(params)

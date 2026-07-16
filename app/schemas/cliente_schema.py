@@ -8,6 +8,7 @@ class ClienteBase(BaseModel):
     telefono: str
     nombre: str 
     apellido: str
+    email: Optional[str] = None
 
 class ClienteCreate(ClienteBase):
     pass

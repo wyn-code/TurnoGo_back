@@ -4,22 +4,22 @@ from fastapi import BackgroundTasks, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.estados_turno import (
+    CANCELADO,
+    CONFIRMADO,
+    validar_transicion,
+)
 from app.models.cliente import Cliente
 from app.models.empleado import Empleado
 from app.models.horarios_negocio import HorarioNegocio
 from app.models.negocio import Negocio
 from app.models.servicio import Servicio
 from app.models.turnos import Turno
-from app.schemas.appointment_schema import TurnoActualizar, TurnoCrear
-# 🔥 Importamos tu nuevo servicio de Twilio
+from app.schemas.appointment_schema import CambiarEstadoTurno, TurnoActualizar, TurnoCrear
+from app.services.email_service import send_booking_confirmation_email, send_cancellation_email
 
 
 SOLAPAMIENTO_DETALLE = "El empleado ya tiene un turno en ese horario"
-
-# Ajustá estos IDs según tus registros reales de estado_turno
-ESTADO_PENDIENTE_CONFIRMACION_CLIENTE = 1
-ESTADO_PENDIENTE_APROBACION = 2
-ESTADO_CONFIRMADO = 3
 
 
 def listar_turnos(db: Session):
@@ -156,12 +156,8 @@ def _resolver_fecha_hora_fin(
     return fecha_hora_inicio + timedelta(minutes=servicio.duracion_min)
 
 
-def _resolver_estado_inicial(servicio: Servicio) -> int:
-    return (
-        ESTADO_PENDIENTE_APROBACION
-        if servicio.requiere_aprobacion
-        else ESTADO_PENDIENTE_CONFIRMACION_CLIENTE
-    )
+def _resolver_estado_inicial(_servicio: Servicio) -> int:
+    return CONFIRMADO
 
 
 def _lanzar_error_integridad(e: IntegrityError) -> None:
@@ -247,27 +243,31 @@ def crear_turno(db: Session, turno: TurnoCrear, background_tasks: BackgroundTask
         db.commit()
         db.refresh(nuevo_turno)
 
-        # 🚀 INTEGRACIÓN DE TWILIO CON BACKGROUND TASKS 🚀
-        try:
-            # Formateamos fecha y hora como strings limpios antes de mandárselos a Twilio
+        # Email de confirmación en background — no bloquea la respuesta 201
+        if cliente.email:
             fecha_str = turno.fecha_hora_inicio.strftime("%d/%m/%Y")
             hora_str = turno.fecha_hora_inicio.strftime("%H:%M")
-            nombre_completo = f"{cliente.nombre} {cliente.apellido}".strip()
-            
-            # Traemos el nombre del negocio mediante la relación del servicio
-            nombre_negocio = servicio.negocio.nombre if hasattr(servicio, "negocio") else "Turnogo"
+            nombre_negocio = servicio.negocio.nombre if hasattr(servicio, "negocio") else "TurnoGo"
+            nombre_empleado = None
+            if turno.id_empleado:
+                emp = db.query(Empleado).filter(
+                    Empleado.id_empleado == turno.id_empleado
+                ).first()
+                if emp:
+                    nombre_empleado = f"{emp.nombre} {emp.apellido}".strip()
 
             background_tasks.add_task(
-                telefono_cliente=cliente.telefono,
-                nombre_cliente=nombre_completo,
+                send_booking_confirmation_email,
+                email=cliente.email,
+                id_turno=nuevo_turno.id_turno,
                 nombre_negocio=nombre_negocio,
+                nombre_servicio=servicio.nombre_servicio,
+                nombre_empleado=nombre_empleado,
                 fecha=fecha_str,
-                hora=hora_str
+                hora=hora_str,
+                direccion=servicio.negocio.direccion if hasattr(servicio, "negocio") else None,
+                telefono_negocio=servicio.negocio.telefono if hasattr(servicio, "negocio") else None,
             )
-
-        except Exception:
-            # Si se rompe el formateo o la cola, lo capturamos para que NO rompa el commit exitoso del turno
-            pass
 
         return nuevo_turno
 
@@ -356,6 +356,11 @@ def actualizar_turno(db: Session, turno_id: int, datos: TurnoActualizar):
     turno_db.fecha_hora_fin = nueva_fecha_fin
 
     if datos.id_estado is not None:
+        if not validar_transicion(turno_db.id_estado, datos.id_estado):
+            raise HTTPException(
+                status_code=400,
+                detail=f"No se puede pasar del estado {turno_db.id_estado} al {datos.id_estado}",
+            )
         turno_db.id_estado = datos.id_estado
 
     if datos.rechazado_motivo is not None:
@@ -407,3 +412,78 @@ def listar_turnos_por_negocio_y_rango(
         query = query.filter(Turno.id_empleado == id_empleado)
 
     return query.order_by(Turno.fecha_hora_inicio.asc()).all()
+
+
+def cambiar_estado_turno(
+    db: Session,
+    turno_id: int,
+    datos: CambiarEstadoTurno,
+    id_negocio: int,
+    background_tasks: BackgroundTasks,
+):
+    """Change the status of a turno with full validation.
+
+    The caller must ensure *id_negocio* belongs to the authenticated owner.
+    """
+    turno_db = db.query(Turno).filter(Turno.id_turno == turno_id).first()
+
+    if not turno_db:
+        raise HTTPException(status_code=404, detail="Turno no encontrado")
+
+    if turno_db.id_negocio != id_negocio:
+        raise HTTPException(
+            status_code=403,
+            detail="Este turno no pertenece a tu negocio",
+        )
+
+    if not validar_transicion(turno_db.id_estado, datos.id_estado):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"No se puede cambiar del estado {turno_db.id_estado} "
+                f"al estado {datos.id_estado}"
+            ),
+        )
+
+    es_cancelacion = datos.id_estado == CANCELADO and turno_db.id_estado != CANCELADO
+    cliente_email = None
+    nombre_negocio = None
+    nombre_servicio = None
+    fecha_str = None
+    hora_str = None
+
+    if es_cancelacion and turno_db.cliente and turno_db.cliente.email:
+        cliente_email = turno_db.cliente.email
+        nombre_negocio = turno_db.negocio.nombre if turno_db.negocio else "TurnoGo"
+        nombre_servicio = turno_db.servicio.nombre_servicio if turno_db.servicio else "Servicio"
+        fecha_str = turno_db.fecha_hora_inicio.strftime("%d/%m/%Y")
+        hora_str = turno_db.fecha_hora_inicio.strftime("%H:%M")
+
+    turno_db.id_estado = datos.id_estado
+
+    if datos.rechazado_motivo is not None:
+        turno_db.rechazado_motivo = datos.rechazado_motivo
+
+    turno_db.updated_at = datetime.now(UTC)
+
+    try:
+        db.commit()
+        db.refresh(turno_db)
+
+        if es_cancelacion and cliente_email and datos.rechazado_motivo:
+            background_tasks.add_task(
+                send_cancellation_email,
+                email=cliente_email,
+                id_turno=turno_db.id_turno,
+                nombre_negocio=nombre_negocio,
+                nombre_servicio=nombre_servicio,
+                fecha=fecha_str,
+                hora=hora_str,
+                motivo=datos.rechazado_motivo,
+            )
+
+        return turno_db
+
+    except IntegrityError as e:
+        db.rollback()
+        _lanzar_error_integridad(e)

@@ -47,12 +47,17 @@ def obtener_o_crear_cliente(db: Session, datos: ClienteCreate):
 
     cliente_existente = obtener_cliente_por_telefono(db, telefono_normalizado)
     if cliente_existente:
+        if datos.email and not cliente_existente.email:
+            cliente_existente.email = datos.email.strip()
+            db.commit()
+            db.refresh(cliente_existente)
         return cliente_existente
 
     nuevo_cliente = Cliente(
         telefono=telefono_normalizado,
         nombre=datos.nombre.strip(),
         apellido=datos.apellido.strip(),
+        email=datos.email.strip() if datos.email else None,
     )
 
     db.add(nuevo_cliente)

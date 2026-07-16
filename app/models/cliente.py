@@ -10,6 +10,7 @@ class Cliente(Base):
     telefono = Column(String(30), nullable=False, unique=True)
     nombre = Column(String(30), nullable=False)
     apellido = Column(String(30), nullable=False)
+    email = Column(String(100), nullable=True)
     created_at = Column(DateTime, default=datetime.now)
 
     turnos = relationship("Turno", back_populates="cliente")

@@ -1,7 +1,13 @@
-from app.models.turnos import Turno
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
+
 from sqlalchemy import func
+
+from app.core.estados_turno import CANCELADO, NO_ASISTIO
 from app.models.turnos import Turno
+
+# Estados que NO se cuentan en estadísticas (cancelados y no-asistió)
+ESTADOS_EXCLUIDOS = [CANCELADO, NO_ASISTIO]
+# pylint: disable=not-callable
 
 class StatisticsService:
 
@@ -11,10 +17,9 @@ class StatisticsService:
     def get_dashboard_statistics(self, business_id: int):
         return {
             "summary": self.get_summary(business_id)
-    }
+        }
 
     def get_summary(self, business_id: int):
-
         today = self._get_today_appointments(business_id)
         yesterday = self._get_yesterday_appointments(business_id)
 
@@ -47,33 +52,38 @@ class StatisticsService:
             return 100.0
 
         return round(((current - previous) / previous) * 100, 2)
-    
+
+    def _active_filter(self):
+        return Turno.id_estado.notin_(ESTADOS_EXCLUIDOS)
+
     def _get_today_appointments(self, business_id: int) -> int:
         return (
             self.db.query(func.count(Turno.id_turno))
             .filter(
                 Turno.id_negocio == business_id,
-                func.date(Turno.fecha_hora_inicio) == func.current_date()
+                func.date(Turno.fecha_hora_inicio) == func.current_date(),
+                self._active_filter(),
             )
             .scalar()
             or 0
         )
 
     def _get_yesterday_appointments(self, business_id: int) -> int:
-        yesterday = datetime.now().date() - timedelta(days=1)
+        yesterday = datetime.now(UTC).date() - timedelta(days=1)
 
         return (
             self.db.query(func.count(Turno.id_turno))
             .filter(
                 Turno.id_negocio == business_id,
-                func.date(Turno.fecha_hora_inicio) == yesterday
+                func.date(Turno.fecha_hora_inicio) == yesterday,
+                self._active_filter(),
             )
             .scalar()
             or 0
         )
 
     def _get_week_appointments(self, business_id: int) -> int:
-        today = datetime.now().date()
+        today = datetime.now(UTC).date()
 
         start_week = today - timedelta(days=today.weekday())
         end_week = start_week + timedelta(days=6)
@@ -82,14 +92,15 @@ class StatisticsService:
             self.db.query(func.count(Turno.id_turno))
             .filter(
                 Turno.id_negocio == business_id,
-                func.date(Turno.fecha_hora_inicio).between(start_week, end_week)
+                func.date(Turno.fecha_hora_inicio).between(start_week, end_week),
+                self._active_filter(),
             )
             .scalar()
             or 0
         )
 
     def _get_last_week_appointments(self, business_id: int) -> int:
-        today = datetime.now().date()
+        today = datetime.now(UTC).date()
 
         start_this_week = today - timedelta(days=today.weekday())
 
@@ -103,15 +114,15 @@ class StatisticsService:
                 func.date(Turno.fecha_hora_inicio).between(
                     start_last_week,
                     end_last_week
-                )
+                ),
+                self._active_filter(),
             )
             .scalar()
             or 0
         )
 
     def _get_month_appointments(self, business_id: int) -> int:
-
-        today = datetime.now().date()
+        today = datetime.now(UTC).date()
 
         first_day = today.replace(day=1)
 
@@ -122,14 +133,15 @@ class StatisticsService:
                 func.date(Turno.fecha_hora_inicio).between(
                     first_day,
                     today
-                )
+                ),
+                self._active_filter(),
             )
             .scalar()
             or 0
         )
 
     def _get_last_month_appointments(self, business_id: int) -> int:
-        today = datetime.now().date()
+        today = datetime.now(UTC).date()
 
         first_day_this_month = today.replace(day=1)
 
@@ -144,15 +156,15 @@ class StatisticsService:
                 func.date(Turno.fecha_hora_inicio).between(
                     first_day_last_month,
                     last_day_last_month
-                )
+                ),
+                self._active_filter(),
             )
             .scalar()
             or 0
         )
 
     def _get_summary_chart(self, business_id: int):
-
-        today = datetime.now().date()
+        today = datetime.now(UTC).date()
 
         start_week = today - timedelta(days=today.weekday())
         start_last_week = start_week - timedelta(days=7)
@@ -162,7 +174,6 @@ class StatisticsService:
         days = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
 
         for i in range(7):
-
             current_day = start_week + timedelta(days=i)
             previous_day = start_last_week + timedelta(days=i)
 
@@ -170,7 +181,8 @@ class StatisticsService:
                 self.db.query(func.count(Turno.id_turno))
                 .filter(
                     Turno.id_negocio == business_id,
-                    func.date(Turno.fecha_hora_inicio) == current_day
+                    func.date(Turno.fecha_hora_inicio) == current_day,
+                    self._active_filter(),
                 )
                 .scalar()
                 or 0
@@ -180,7 +192,8 @@ class StatisticsService:
                 self.db.query(func.count(Turno.id_turno))
                 .filter(
                     Turno.id_negocio == business_id,
-                    func.date(Turno.fecha_hora_inicio) == previous_day
+                    func.date(Turno.fecha_hora_inicio) == previous_day,
+                    self._active_filter(),
                 )
                 .scalar()
                 or 0
@@ -193,6 +206,3 @@ class StatisticsService:
             })
 
         return chart
-
-
-
