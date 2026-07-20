@@ -1,10 +1,11 @@
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
 from fastapi import HTTPException
 from unittest.mock import patch
 
 from app.services import auth_service
+from app.services.auth_service import _utcnow
 from app.schemas.auth_schema import RegisterRequest
 from app.models.usuario import Usuario
 from app.core.security import verify_password, get_password_hash
@@ -288,7 +289,7 @@ def test_reset_password_success(db):
         email_verified=True,
         reset_token="abc123",
         reset_token_expiration=(
-            datetime.now()
+            datetime.now(timezone.utc).replace(tzinfo=None)
             + timedelta(hours=1)
         ),
     )
@@ -362,7 +363,7 @@ def test_verify_email_success(db):
         email_verified=False,
         verification_token="verify123",
         verification_token_expiration=(
-            datetime.now()
+            datetime.now(timezone.utc).replace(tzinfo=None)
             + timedelta(hours=1)
         ),
     )
@@ -485,7 +486,8 @@ def test_reset_password_contraseña_invalida(db):
         email_verified=True,
         reset_token="valid-token",
         reset_token_expiration=(
-            datetime.now() + timedelta(hours=1)
+            datetime.now(timezone.utc).replace(tzinfo=None)
+            + timedelta(hours=1)
         ),
     )
 
@@ -500,6 +502,88 @@ def test_reset_password_contraseña_invalida(db):
         )
 
     assert exc.value.status_code == 400
+
+
+def test_reset_password_misma_contraseña(db, monkeypatch):
+
+    monkeypatch.setattr(
+        auth_service,
+        "send_reset_password_email",
+        lambda *args, **kwargs: None,
+    )
+
+    usuario = Usuario(
+        usuario_us="usuario_test",
+        email_us="usuario@test.com",
+        contrasena_us=get_password_hash("SamePassword123!"),
+        email_verified=True,
+    )
+
+    db.add(usuario)
+    db.commit()
+    db.refresh(usuario)
+
+    auth_service.forgot_password(db, "usuario@test.com")
+    db.refresh(usuario)
+
+    with pytest.raises(HTTPException) as exc:
+        auth_service.reset_password(
+            db,
+            usuario.reset_token,
+            "SamePassword123!",
+        )
+
+    assert exc.value.status_code == 400
+    assert exc.value.detail == (
+        "La nueva contraseña no puede ser "
+        "igual a la anterior"
+    )
+
+    db.refresh(usuario)
+    assert verify_password(
+        "SamePassword123!",
+        usuario.contrasena_us,
+    )
+
+
+def test_reset_password_token_expira_24hs(db, monkeypatch):
+
+    monkeypatch.setattr(
+        auth_service,
+        "send_reset_password_email",
+        lambda *args, **kwargs: None,
+    )
+
+    usuario = Usuario(
+        usuario_us="usuario_test",
+        email_us="usuario@test.com",
+        contrasena_us=get_password_hash("OldPassword123!"),
+        email_verified=True,
+    )
+
+    db.add(usuario)
+    db.commit()
+    db.refresh(usuario)
+
+    auth_service.forgot_password(db, "usuario@test.com")
+    db.refresh(usuario)
+
+    assert usuario.reset_token is not None
+
+    usuario.reset_token_expiration = (
+        _utcnow() - timedelta(seconds=1)
+    )
+    db.commit()
+
+    with pytest.raises(HTTPException) as exc:
+        auth_service.reset_password(
+            db,
+            usuario.reset_token,
+            "NewPassword456!",
+        )
+
+    assert exc.value.status_code == 400
+    assert exc.value.detail == "Token expirado"
 
 
 def test_forgot_then_reset_then_login(db, monkeypatch):

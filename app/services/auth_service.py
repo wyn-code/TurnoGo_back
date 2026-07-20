@@ -1,6 +1,10 @@
-from datetime import datetime, timedelta, UTC
+from datetime import datetime, timedelta, timezone
 import secrets
 import re
+
+
+def _utcnow():
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 from app.services.email_service import (
     send_verification_email,
@@ -27,8 +31,6 @@ from app.schemas.auth_schema import (
     RegisterRequest,
     TokenResponse,
 )
-
-from app.core.config import ACCESS_TOKEN_EXPIRE_MINUTES
 
 
 PASSWORD_REGEX = (
@@ -80,7 +82,7 @@ def register_user(db: Session, data: RegisterRequest) -> Usuario:
         email_verified=False,
         verification_token=verification_token,
         verification_token_expiration=(
-            datetime.now() + timedelta(hours=24)
+            _utcnow() + timedelta(hours=24)
         ),
     )
 
@@ -184,23 +186,14 @@ def forgot_password(
 
     usuario.reset_token = token
     usuario.reset_token_expiration = (
-        datetime.now(UTC) + timedelta(hours=1)
+        _utcnow() + timedelta(hours=24)
     )
 
     try:
         db.commit()
-        print(f"[FORGOT-PASSWORD] Commit OK")
     except Exception as e:
         db.rollback()
-        print(f"[FORGOT-PASSWORD] ERROR en commit: {e}")
         raise
-
-    verificar = (
-        db.query(Usuario)
-        .filter(Usuario.email_us == email)
-        .first()
-    )
-    print(f"[FORGOT-PASSWORD] Verificacion post-commit: reset_token={verificar.reset_token}")
 
     try:
         send_reset_password_email(
@@ -208,7 +201,7 @@ def forgot_password(
             token,
         )
     except Exception as e:
-        print(f"ERROR enviando email de reset: {e}")
+        pass
 
     return {
         "message": (
@@ -239,7 +232,7 @@ def reset_password(
     if (
         usuario.reset_token_expiration is None
         or usuario.reset_token_expiration
-        < datetime.now()
+        < _utcnow()
     ):
         raise HTTPException(
             status_code=400,
@@ -254,9 +247,22 @@ def reset_password(
             status_code=400,
             detail=(
                 "La contraseña debe tener "
-                "entre 10 y 20 caracteres, "
+                "entre 12 y 16 caracteres, "
                 "incluyendo mayúscula, "
-                "minúscula y número"
+                "minúscula, número "
+                "y un carácter especial"
+            ),
+        )
+
+    if verify_password(
+        new_password,
+        usuario.contrasena_us,
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "La nueva contraseña no puede ser "
+                "igual a la anterior"
             ),
         )
 
@@ -295,7 +301,7 @@ def verify_email(
     if (
         usuario.verification_token_expiration is None
         or usuario.verification_token_expiration
-        < datetime.now()
+        < _utcnow()
     ):
         raise HTTPException(
             status_code=400,

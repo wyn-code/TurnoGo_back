@@ -77,14 +77,17 @@ def send_reset_password_email(
             </a>
 
             <p>
-                Este enlace expirará en 1 hora.
+                Este enlace expirará en 24 horas.
+            </p>
+
+            <p>
+                Si no solicitaste el cambio, ignorá
+                este mensaje.
             </p>
         """,
     }
 
-    print("=== ENVIANDO EMAIL RESET PASSWORD ===")
-    print("Destinatario:", email)
-    print("Link:", reset_link)
+    response = resend.Emails.send(params)
 
     try:
         response = resend.Emails.send(params)
@@ -254,3 +257,4 @@ def send_booking_confirmation_email(
     }
 
     return resend.Emails.send(params)
+
