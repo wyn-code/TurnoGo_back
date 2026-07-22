@@ -335,3 +335,49 @@ def send_two_factor_email(
         print("=== ERROR ENVIANDO OTP ===")
         print(e)
         raise
+
+def send_otp_email(
+    email: str,
+    code: str,
+):
+    params = {
+        "from": FROM_ADDRESS,
+        "to": [email],
+        "subject": "Código de verificación de TurnoGo",
+        "html": f"""
+        <div style="font-family: Arial, sans-serif; max-width:600px; margin:auto;">
+            <h2>Verificación en dos pasos</h2>
+
+            <p>Utilizá el siguiente código para completar el inicio de sesión:</p>
+
+            <div style="
+                font-size:36px;
+                font-weight:bold;
+                text-align:center;
+                letter-spacing:8px;
+                margin:30px 0;
+                color:#b45309;
+            ">
+                {code}
+            </div>
+
+            <p>
+                Este código tiene una validez de
+                <strong>10 minutos</strong>.
+            </p>
+
+            <p>
+                Si no intentaste iniciar sesión,
+                simplemente ignorá este correo.
+            </p>
+
+            <hr>
+
+            <p style="font-size:12px;color:#888;">
+                Equipo de TurnoGo
+            </p>
+        </div>
+        """,
+    }
+
+    return resend.Emails.send(params)
