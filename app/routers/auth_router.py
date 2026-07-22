@@ -7,6 +7,8 @@ from app.services.auth_service import (
     verify_email,
     forgot_password,
     reset_password,
+    verify_credentials,
+    verify_2fa,
 )
 from app.schemas.auth_schema import (
     AuthResponse,
@@ -14,6 +16,7 @@ from app.schemas.auth_schema import (
     LoginRequest,
     RegisterRequest,
     ResetPasswordRequest,
+    Verify2FARequest,
     TokenResponse,
 )
 from app.services.email_service import send_verification_email
@@ -114,3 +117,16 @@ def verify_credentials_endpoint(
         payload,
     )
 
+@router.post(
+    "/verify-2fa",
+    response_model=TokenResponse,
+)
+def verify_2fa_endpoint(
+    payload: Verify2FARequest,
+    db: Session = Depends(get_db),
+):
+    return verify_2fa(
+        db,
+        payload.email_us,
+        payload.code,
+    )

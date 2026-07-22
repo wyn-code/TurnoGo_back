@@ -107,3 +107,10 @@ class ResetPasswordRequest(BaseModel):
     model_config = ConfigDict(
         from_attributes=True
     )
+
+    class Verify2FARequest(BaseModel):
+        email_us: EmailStr
+        code: str = Field(
+            min_length=6,
+            max_length=6,
+        )

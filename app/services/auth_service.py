@@ -1,7 +1,9 @@
 from datetime import datetime, timedelta, timezone
 import secrets
 import re
+import random
 
+from app.services.email_service import send_otp_email
 
 def _utcnow():
     return datetime.now(timezone.utc).replace(tzinfo=None)
@@ -327,3 +329,108 @@ def verify_email(
         "token_type": "bearer",
         "usuario_id": usuario.id_us,
     }
+
+def verify_credentials(
+    db: Session,
+    data: LoginRequest,
+):
+    usuario = (
+        db.query(Usuario)
+        .filter(
+            or_(
+                Usuario.email_us == data.email_us,
+                Usuario.usuario_us == data.email_us,
+            )
+        )
+        .first()
+    )
+
+    if not usuario:
+        raise HTTPException(
+            status_code=401,
+            detail="Credenciales inválidas",
+        )
+
+    if not verify_password(
+        data.contrasena_us,
+        usuario.contrasena_us,
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="Credenciales inválidas",
+        )
+
+    if not usuario.email_verified:
+        raise HTTPException(
+            status_code=403,
+            detail="Debes verificar tu email antes de iniciar sesión",
+        )
+
+    otp = f"{random.randint(100000, 999999)}"
+
+    usuario.otp_code = otp
+    usuario.otp_expires_at = (
+        _utcnow() + timedelta(minutes=10)
+    )
+
+    db.commit()
+
+    send_otp_email(
+        usuario.email_us,
+        otp,
+    )
+
+    return {
+        "success": True,
+        "message": "Código enviado al correo",
+    }
+
+def verify_2fa(
+    db: Session,
+    email: str,
+    code: str,
+):
+    usuario = (
+        db.query(Usuario)
+        .filter(
+            Usuario.email_us == email
+        )
+        .first()
+    )
+
+    if not usuario:
+        raise HTTPException(
+            status_code=401,
+            detail="Usuario no encontrado",
+        )
+
+    if usuario.otp_code != code:
+        raise HTTPException(
+            status_code=401,
+            detail="Código incorrecto",
+        )
+
+    if (
+        usuario.otp_expires_at is None
+        or usuario.otp_expires_at < _utcnow()
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="Código expirado",
+        )
+
+    usuario.otp_code = None
+    usuario.otp_expires_at = None
+
+    db.commit()
+
+    access_token = create_access_token(
+        subject=usuario.id_us,
+        expires_delta=timedelta(
+            minutes=ACCESS_TOKEN_EXPIRE_MINUTES
+        ),
+    )
+
+    return TokenResponse(
+        access_token=access_token,
+    )
