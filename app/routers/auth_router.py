@@ -104,3 +104,13 @@ def verify_email_endpoint(
         token,
     )
 
+@router.post("/verify-credentials")
+def verify_credentials_endpoint(
+    payload: LoginRequest,
+    db: Session = Depends(get_db),
+):
+    return verify_credentials(
+        db,
+        payload,
+    )
+

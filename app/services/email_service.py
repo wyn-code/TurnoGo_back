@@ -258,3 +258,80 @@ def send_booking_confirmation_email(
 
     return resend.Emails.send(params)
 
+def send_two_factor_email(
+    email: str,
+    code: str,
+):
+    """
+    Envía el código OTP para el segundo factor de autenticación.
+    """
+
+    params = {
+        "from": FROM_ADDRESS,
+        "to": [email],
+        "subject": "Código de verificación - TurnoGo",
+        "html": f"""
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:32px;background:#ffffff;">
+
+            <h2 style="color:#1f2937;text-align:center;">
+                Verificación en dos pasos
+            </h2>
+
+            <p style="font-size:16px;color:#4b5563;">
+                Detectamos un intento de inicio de sesión en tu cuenta de
+                <strong>TurnoGo</strong>.
+            </p>
+
+            <p style="font-size:16px;color:#4b5563;">
+                Para continuar ingresá el siguiente código:
+            </p>
+
+            <div
+                style="
+                    margin:32px auto;
+                    width:220px;
+                    padding:18px;
+                    background:#f3f4f6;
+                    border-radius:12px;
+                    text-align:center;
+                    font-size:34px;
+                    font-weight:bold;
+                    letter-spacing:8px;
+                    color:#111827;
+                "
+            >
+                {code}
+            </div>
+
+            <p style="font-size:15px;color:#6b7280;">
+                Este código vencerá en
+                <strong>10 minutos</strong>.
+            </p>
+
+            <p style="font-size:15px;color:#6b7280;">
+                Si no intentaste iniciar sesión,
+                simplemente ignorá este correo.
+            </p>
+
+            <hr style="margin:30px 0;">
+
+            <p style="font-size:12px;color:#9ca3af;text-align:center;">
+                © TurnoGo
+            </p>
+
+        </div>
+        """,
+    }
+
+    try:
+        response = resend.Emails.send(params)
+
+        print("=== OTP ENVIADO ===")
+        print(response)
+
+        return response
+
+    except Exception as e:
+        print("=== ERROR ENVIANDO OTP ===")
+        print(e)
+        raise
