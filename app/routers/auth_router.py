@@ -128,5 +128,5 @@ def verify_2fa_endpoint(
     return verify_2fa(
         db,
         payload.email_us,
-        payload.code,
+        payload.otp_code,
     )

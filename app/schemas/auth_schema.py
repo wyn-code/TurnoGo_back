@@ -51,13 +51,13 @@ class VerifyCredentialsResponse(BaseModel):
 # VERIFY 2FA
 # =====================================
 
-class Verify2FARequest(BaseModel):
-    email_us: EmailStr
-    otp_code: str = Field(
-        min_length=6,
-        max_length=6,
-    )
+    class Verify2FARequest(BaseModel):
+        email_us: EmailStr
 
+        otp_code: str = Field(
+            min_length=6,
+            max_length=6,
+        )
 
 # =====================================
 # TOKEN
@@ -108,9 +108,3 @@ class ResetPasswordRequest(BaseModel):
         from_attributes=True
     )
 
-    class Verify2FARequest(BaseModel):
-        email_us: EmailStr
-        code: str = Field(
-            min_length=6,
-            max_length=6,
-        )
