@@ -32,8 +32,6 @@ def _issue_token_or_send_otp(
     db: Session,
     usuario: Usuario,
 ) -> TokenResponse | None:
-    """Devuelve un token si la 2FA fue verificada recientemente, o envía
-    un OTP nuevo y devuelve None (el login debe continuar por /verify-2fa)."""
     if (
         usuario.last_2fa_verified_at is not None
         and usuario.last_2fa_verified_at
