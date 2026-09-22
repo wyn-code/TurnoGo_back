@@ -4,8 +4,20 @@ import re
 from google.auth.exceptions import GoogleAuthError
 from app.services.email_service import send_otp_email
 
+MAX_LOGIN_ATTEMPTS = 5
+LOCKOUT_MINUTES = 15
+
 def _utcnow():
     return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def _check_account_lockout(usuario: Usuario) -> None:
+    if usuario.locked_until and usuario.locked_until > _utcnow():
+        remaining = int((usuario.locked_until - _utcnow()).total_seconds() / 60) + 1
+        raise HTTPException(
+            status_code=423,
+            detail=f"Cuenta bloqueada temporalmente. Intentá de nuevo en {remaining} minutos.",
+        )
 
 
 def _check_estado(usuario: Usuario) -> None:
@@ -173,6 +185,8 @@ def login_user(
             detail="Credenciales invalidas",
         )
 
+    _check_account_lockout(usuario)
+
     if not usuario.contrasena_us:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -187,11 +201,19 @@ def login_user(
         data.contrasena_us,
         usuario.contrasena_us,
     ):
+        usuario.failed_login_attempts = (usuario.failed_login_attempts or 0) + 1
+        if usuario.failed_login_attempts >= MAX_LOGIN_ATTEMPTS:
+            usuario.locked_until = _utcnow() + timedelta(minutes=LOCKOUT_MINUTES)
+        db.commit()
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Credenciales invalidas",
         )
     
+    usuario.failed_login_attempts = 0
+    usuario.locked_until = None
+    db.commit()
+
     if not usuario.email_verified:
         raise HTTPException(
             status_code=403,
@@ -414,6 +436,8 @@ def verify_credentials(
             detail="Credenciales inválidas",
         )
 
+    _check_account_lockout(usuario)
+
     if not usuario.contrasena_us:
         raise HTTPException(
             status_code=401,
@@ -428,10 +452,18 @@ def verify_credentials(
         data.contrasena_us,
         usuario.contrasena_us,
     ):
+        usuario.failed_login_attempts = (usuario.failed_login_attempts or 0) + 1
+        if usuario.failed_login_attempts >= MAX_LOGIN_ATTEMPTS:
+            usuario.locked_until = _utcnow() + timedelta(minutes=LOCKOUT_MINUTES)
+        db.commit()
         raise HTTPException(
             status_code=401,
             detail="Credenciales inválidas",
         )
+
+    usuario.failed_login_attempts = 0
+    usuario.locked_until = None
+    db.commit()
 
     if not usuario.email_verified:
         raise HTTPException(

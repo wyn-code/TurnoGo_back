@@ -132,6 +132,21 @@ class Usuario(Base):
         index=True,
     )
 
+    # ==========================
+    # LOGIN ATTEMPT TRACKING
+    # ==========================
+
+    failed_login_attempts = Column(
+        Integer,
+        default=0,
+        nullable=False,
+    )
+
+    locked_until = Column(
+        DateTime,
+        nullable=True,
+    )
+
     negocios = relationship(
         "Negocio",
         back_populates="usuario",

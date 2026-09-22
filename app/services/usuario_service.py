@@ -107,6 +107,18 @@ def borrar_usuario(db: Session, usuario_id: int):
     if not usuario_db:
         return None
 
+    from app.models.negocio import Negocio
+    from app.services.plan_service import obtener_suscripcion_activa
+
+    negocio = db.query(Negocio).filter(Negocio.usuario_id == usuario_id).first()
+    if negocio:
+        suscripcion_activa = obtener_suscripcion_activa(negocio.id_negocio, db)
+        if suscripcion_activa:
+            raise HTTPException(
+                status_code=409,
+                detail="No se puede eliminar el usuario: tiene una membresía activa. Cancelá o esperá a que venza la membresía antes de eliminar la cuenta.",
+            )
+
     db.delete(usuario_db)
     db.commit()
     return usuario_db

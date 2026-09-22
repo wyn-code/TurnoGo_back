@@ -1,4 +1,5 @@
 import re
+import math
 import logging
 from fastapi import HTTPException
 from sqlalchemy.orm import Session, joinedload, selectinload
@@ -61,27 +62,36 @@ def obtener_negocios_mapa(db: Session):
         .all()
     )
 
-def listar_negocios(db: Session):
-    return db.query(Negocio).options(
+def listar_negocios(db: Session, page: int = 1, page_size: int = 12):
+    base_query = db.query(Negocio).filter(Negocio.activo == True)
+    total = base_query.count()
+    total_pages = math.ceil(total / page_size) if total > 0 else 1
+    offset = (page - 1) * page_size
+    items = base_query.options(
         joinedload(Negocio.categoria),
         joinedload(Negocio.localidad),
         joinedload(Negocio.provincia),
-    ).filter(
-        Negocio.activo == True
-    ).all()
+    ).offset(offset).limit(page_size).all()
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages,
+    }
 
 
-def listar_negocios_admin(db: Session):
-    negocios = (
-        db.query(Negocio)
-        .options(
-            joinedload(Negocio.categoria),
-            joinedload(Negocio.usuario),
-        )
-        .all()
-    )
+def listar_negocios_admin(db: Session, page: int = 1, page_size: int = 12):
+    base_query = db.query(Negocio)
+    total = base_query.count()
+    total_pages = math.ceil(total / page_size) if total > 0 else 1
+    offset = (page - 1) * page_size
+    negocios = base_query.options(
+        joinedload(Negocio.categoria),
+        joinedload(Negocio.usuario),
+    ).offset(offset).limit(page_size).all()
 
-    return [
+    items = [
         {
             "id_negocio": n.id_negocio,
             "nombre": n.nombre,
@@ -99,6 +109,14 @@ def listar_negocios_admin(db: Session):
         }
         for n in negocios
     ]
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages,
+    }
 
 
 def obtener_negocio_por_id(db: Session, negocio_id: int):

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from app.core.dependencies import get_current_user, get_db, require_role
 from app.models.usuario import Usuario
@@ -9,7 +9,8 @@ from app.schemas.negocio_schema import (
     NegocioCompleteResponse,
     NegocioAdminResponse,
     NegocioUpdate,
-    NegocioMapaResponse
+    NegocioMapaResponse,
+    PaginatedResponse,
 )
 from app.services import negocio_service
 
@@ -29,17 +30,23 @@ def mapa(db: Session = Depends(get_db)):
     return negocio_service.obtener_negocios_mapa(db)
 
 
-@router.get("/", response_model=list[NegocioListResponse])
-def ver_negocios(db: Session = Depends(get_db)):
-    return negocio_service.listar_negocios(db)
+@router.get("/", response_model=PaginatedResponse[NegocioListResponse])
+def ver_negocios(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(12, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    return negocio_service.listar_negocios(db, page=page, page_size=page_size)
 
 
-@router.get("/admin", response_model=list[NegocioAdminResponse])
+@router.get("/admin", response_model=PaginatedResponse[NegocioAdminResponse])
 def ver_negocios_admin(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(12, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_role("admin")),
 ):
-    return negocio_service.listar_negocios_admin(db)
+    return negocio_service.listar_negocios_admin(db, page=page, page_size=page_size)
 
 @router.get("/me", response_model=NegocioResponse)
 def obtener_mi_negocio(

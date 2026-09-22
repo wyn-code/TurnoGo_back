@@ -1,6 +1,16 @@
 from datetime import datetime
-from typing import Optional, List
+from typing import Generic, Optional, List, TypeVar
 from pydantic import BaseModel, ConfigDict, Field
+
+T = TypeVar("T")
+
+
+class PaginatedResponse(BaseModel, Generic[T]):
+    items: list[T]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
 
 from app.schemas.horarios_negocio_schema import HorarioNegocioCreate, HorarioNegocioResponse
 from app.schemas.servicio_schema import (
