@@ -10,6 +10,8 @@ from app.routers.categoria_router import router as categoria_router
 from app.routers.empleado_router import router as empleado_router
 from app.routers.negocio_router import router as negocio_router
 from app.routers.empleado_calendario_router import router as empleado_calendario_router
+from app.routers.cancha_router import router as cancha_router
+from app.routers.espacio_router import router as espacio_router
 from app.routers.servicio_router import router as servicio_router
 from app.routers.turno_router import router as turno_router
 from app.routers.usuario_router import router as usuario_router
@@ -59,6 +61,8 @@ def create_app():
     app.include_router(auth_router, prefix="/api", tags=["Auth"])
     app.include_router(turno_router, prefix="/api", tags=["Turnos"])
     app.include_router(empleado_router, prefix="/api", tags=["Empleados"])
+    app.include_router(espacio_router, prefix="/api")
+    app.include_router(cancha_router, prefix="/api")
     app.include_router(servicio_router, prefix="/api", tags=["Servicios"])
     app.include_router(negocio_router, prefix="/api", tags=["Negocios"])
     app.include_router(empleado_calendario_router, prefix="/api", tags=["Empleados Calendario"])

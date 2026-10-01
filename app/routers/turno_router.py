@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -12,6 +12,7 @@ from app.schemas.appointment_schema import (
     TurnoActualizar,
     TurnoResponse,
     TurnoDisponibilidad,
+    TurnoConRecurso,
 )
 from app.core.estados_turno import CONFIRMADO, COMPLETADO, CANCELADO, NO_ASISTIO, ASISTIO
 from app.services.qr_service import validar_token_qr
@@ -24,6 +25,7 @@ from app.services.turno_service import (
     cambiar_estado_turno,
     listar_turnos_por_negocio_y_rango,
     listar_turnos_disponibilidad,
+    listar_turnos_con_recurso,
 )
 
 router = APIRouter(prefix="/turnos", tags=["Turnos"])
@@ -34,6 +36,15 @@ def listar_por_rango(
     desde: datetime = Query(..., description="Formato ISO: 2026-04-01T00:00:00"),
     hasta: datetime = Query(..., description="Formato ISO: 2026-05-01T00:00:00"),
     id_empleado: int | None = Query(None),
+    id_espacio: int | None = Query(
+        None,
+        description="Espacio a consultar; tiene prioridad sobre id_empleado.",
+    ),
+    id_cancha: int | None = Query(
+        None,
+        deprecated=True,
+        description="Alias legado de id_espacio.",
+    ),
     negocio: Negocio = Depends(get_current_negocio),
     db: Session = Depends(get_db),
 ):
@@ -49,6 +60,26 @@ def listar_por_rango(
         desde=desde,
         hasta=hasta,
         id_empleado=id_empleado,
+        id_espacio=id_espacio if id_espacio is not None else id_cancha,
+    )
+
+
+@router.get("/disponibles", response_model=list[TurnoConRecurso])
+def listar_disponibles(
+    categoria_padre: int | None = Query(
+        None,
+        description="id de categoría; incluye sus sub-categorías.",
+    ),
+    fecha: date | None = Query(None, description="Formato ISO: 2026-04-01"),
+    estado: int | None = Query(None, description="id_estado del turno"),
+    db: Session = Depends(get_db),
+):
+    """Turnos por categoría jerárquica/fecha/estado, con su espacio o empleado."""
+    return listar_turnos_con_recurso(
+        db=db,
+        categoria_padre=categoria_padre,
+        fecha=fecha,
+        estado=estado,
     )
 
 
@@ -58,6 +89,15 @@ def listar_disponibilidad(
     desde: datetime = Query(..., description="Formato ISO: 2026-04-01T00:00:00"),
     hasta: datetime = Query(..., description="Formato ISO: 2026-05-01T00:00:00"),
     id_empleado: int | None = Query(None),
+    id_espacio: int | None = Query(
+        None,
+        description="Espacio a consultar; tiene prioridad sobre id_empleado.",
+    ),
+    id_cancha: int | None = Query(
+        None,
+        deprecated=True,
+        description="Alias legado de id_espacio.",
+    ),
     db: Session = Depends(get_db),
 ):
     if hasta <= desde:
@@ -72,6 +112,7 @@ def listar_disponibilidad(
         desde=desde,
         hasta=hasta,
         id_empleado=id_empleado,
+        id_espacio=id_espacio if id_espacio is not None else id_cancha,
     )
 
 

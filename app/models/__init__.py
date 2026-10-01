@@ -1,4 +1,6 @@
 from .categoria import Categoria
+from .espacio import Espacio
+from .cancha import Cancha  # noqa: F401 (alias legado)
 from .cliente import Cliente
 from .turnos import Turno
 from .servicio import Servicio

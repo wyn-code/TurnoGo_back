@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, model_validator, ConfigDict
 
@@ -18,12 +18,28 @@ def _validar_rango_horario(
         raise ValueError("fecha_hora_fin debe ser mayor que fecha_hora_inicio")
 
 
+def _unificar_espacio(self):
+    """`id_cancha` es el nombre legado de `id_espacio`: se normaliza a este."""
+    if self.id_cancha is not None:
+        if self.id_espacio is not None and self.id_espacio != self.id_cancha:
+            raise ValueError("id_cancha e id_espacio no coinciden")
+        self.id_espacio = self.id_cancha
+    self.id_cancha = self.id_espacio
+    return self
+
+
 class TurnoCrear(BaseModel):
     id_negocio: int
     id_cliente: int
     id_servicio: int
     fecha_hora_inicio: datetime
     id_empleado: Optional[int] = None
+    id_espacio: Optional[int] = None
+    id_cancha: Optional[int] = None  # alias legado de id_espacio
+
+    @model_validator(mode="after")
+    def unificar_espacio(self):
+        return _unificar_espacio(self)
 
 
 class TurnoActualizar(BaseModel):
@@ -31,9 +47,15 @@ class TurnoActualizar(BaseModel):
     id_servicio: Optional[int] = None
     id_estado: Optional[int] = None
     id_empleado: Optional[int] = None
+    id_espacio: Optional[int] = None
+    id_cancha: Optional[int] = None  # alias legado de id_espacio
     fecha_hora_inicio: Optional[datetime] = None
     fecha_hora_fin: Optional[datetime] = None
     rechazado_motivo: Optional[str] = None
+
+    @model_validator(mode="after")
+    def unificar_espacio(self):
+        return _unificar_espacio(self)
 
     @model_validator(mode="after")
     def validar_rango_horario(self):
@@ -79,6 +101,8 @@ class TurnoResponse(BaseModel):
     id_turno: int
     id_negocio: int
     id_estado: int
+    id_espacio: Optional[int] = None
+    id_cancha: Optional[int] = None  # alias legado de id_espacio
 
     fecha_hora_inicio: datetime
     fecha_hora_fin: Optional[datetime] = None
@@ -101,10 +125,36 @@ class TurnoDisponibilidad(BaseModel):
     id_servicio: int
     id_estado: int
     id_empleado: Optional[int] = None
+    id_espacio: Optional[int] = None
+    id_cancha: Optional[int] = None  # alias legado de id_espacio
 
     fecha_hora_inicio: datetime
     fecha_hora_fin: Optional[datetime] = None
     rechazado_motivo: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RecursoSimple(BaseModel):
+    """Recurso reservado de un turno: un empleado o un espacio."""
+
+    tipo: Literal["empleado", "espacio"]
+    id: int
+    nombre: str
+
+
+class TurnoConRecurso(BaseModel):
+    """Turno público enriquecido con su recurso; sin datos del cliente."""
+
+    id_turno: int
+    id_negocio: int
+    id_servicio: int
+    id_estado: int
+    id_empleado: Optional[int] = None
+    id_espacio: Optional[int] = None
+    fecha_hora_inicio: datetime
+    fecha_hora_fin: Optional[datetime] = None
+    recurso: Optional[RecursoSimple] = None
 
     model_config = ConfigDict(from_attributes=True)
 

@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -9,6 +9,8 @@ from app.models.usuario import Usuario
 from app.schemas.categoria_schema import (
     CategoriaCreate,
     CategoriaResponse,
+    CategoriaTop,
+    CategoriaTree,
     CategoriaUpdate,
 )
 from app.services import categoria_service
@@ -19,6 +21,21 @@ router = APIRouter(prefix="/categorias", tags=["Categorias"])
 @router.get("/", response_model=List[CategoriaResponse])
 def listar(db: Session = Depends(get_db)):
     return categoria_service.listar_categorias(db)
+
+
+@router.get("/tree", response_model=List[CategoriaTree])
+def arbol(db: Session = Depends(get_db)):
+    """Árbol completo: cada raíz con sus hijos anidados (padres antes que hijos)."""
+    return categoria_service.arbol_categorias(db)
+
+
+@router.get("/top", response_model=List[CategoriaTop])
+def top(
+    limit: int = Query(5, ge=1, le=50),
+    db: Session = Depends(get_db),
+):
+    """Categorías con más negocios activos (público); sin las vacías."""
+    return categoria_service.categorias_top(db, limit)
 
 
 @router.get("/{categoria_id}", response_model=CategoriaResponse)
@@ -76,7 +93,10 @@ def borrar(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_role("admin")),
 ):
-    row = categoria_service.borrar_categoria(db, categoria_id)
+    try:
+        row = categoria_service.borrar_categoria(db, categoria_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
     if not row:
         raise HTTPException(status_code=404, detail="Categoria no encontrada")
     return {"mensaje": "Categoria eliminada"}

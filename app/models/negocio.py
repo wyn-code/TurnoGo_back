@@ -1,5 +1,5 @@
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Float, DateTime
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, synonym
 from app.db.base import Base
 from datetime import datetime
 
@@ -64,6 +64,14 @@ class Negocio(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+
+    espacios = relationship(
+        "Espacio",
+        back_populates="negocio",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    canchas = synonym("espacios")  # alias legado
 
     horarios = relationship(
         "HorarioNegocio",

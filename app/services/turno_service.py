@@ -1,9 +1,9 @@
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 
 from fastapi import BackgroundTasks, HTTPException
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.core.estados_turno import (
     CANCELADO,
@@ -12,17 +12,20 @@ from app.core.estados_turno import (
 )
 from app.models.cliente import Cliente
 from app.models.empleado import Empleado
+from app.models.espacio import Espacio
 from app.models.horarios_negocio import HorarioNegocio
 from app.models.negocio import Negocio
 from app.models.servicio import Servicio
 from app.models.turnos import Turno
 from app.schemas.appointment_schema import CambiarEstadoTurno, TurnoActualizar, TurnoCrear
+from app.services.categoria_service import ids_con_descendientes
 from app.services.email_service import send_booking_confirmation_email, send_cancellation_email
 from app.services.plan_service import negocio_tiene_funcion
 from app.services.qr_service import generar_token_qr
 
 
 SOLAPAMIENTO_DETALLE = "El empleado ya tiene un turno en ese horario"
+SOLAPAMIENTO_ESPACIO_DETALLE = "La cancha ya tiene un turno en ese horario"
 LIMITE_TURNOS_DIA_FREE = 10
 
 
@@ -88,6 +91,68 @@ def validar_empleado_del_negocio(
         )
 
 
+def validar_espacio_del_negocio(
+    db: Session,
+    id_negocio: int,
+    id_espacio: int | None,
+):
+    if id_espacio is None:
+        return
+
+    espacio = db.query(Espacio).filter(
+        Espacio.id_espacio == id_espacio,
+        Espacio.id_negocio == id_negocio,
+        Espacio.activo.is_(True),
+    ).first()
+
+    if not espacio:
+        raise HTTPException(
+            status_code=400,
+            detail="Cancha no encontrada para el negocio indicado",
+        )
+
+
+def negocio_es_multi_espacio(db: Session, id_negocio: int) -> bool:
+    """Un negocio es multi-espacio si tiene al menos un espacio activo."""
+    return db.query(
+        db.query(Espacio)
+        .filter(Espacio.id_negocio == id_negocio, Espacio.activo.is_(True))
+        .exists()
+    ).scalar()
+
+
+def validar_recurso_unico(
+    db: Session,
+    id_negocio: int,
+    id_empleado: int | None,
+    id_espacio: int | None,
+    exigir_espacio_si_multi: bool = True,
+):
+    """Un turno reserva un empleado O un espacio, nunca ambos.
+
+    Es la validación de aplicación de `chk_turno_no_empleado_y_espacio`
+    (el CHECK de DB queda como red de seguridad). Además, en un negocio
+    multi-espacio el recurso es el espacio: hay que indicar `id_espacio` y no
+    `id_empleado`. `exigir_espacio_si_multi=False` se usa al editar turnos
+    sin tocar el recurso, para no invalidar turnos previos.
+    """
+    if id_empleado is not None and id_espacio is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="El turno debe tener un empleado o un espacio, no ambos",
+        )
+
+    if (
+        exigir_espacio_si_multi
+        and id_espacio is None
+        and negocio_es_multi_espacio(db, id_negocio)
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Este negocio reserva por espacio: indicá id_espacio",
+        )
+
+
 def validar_turno_dentro_del_horario(
     db: Session,
     id_negocio: int,
@@ -142,7 +207,14 @@ def hay_superposicion(
     inicio: datetime,
     fin: datetime | None,
     excluir_turno_id: int | None = None,
+    id_espacio: int | None = None,
 ):
+    """¿El intervalo se pisa con otro turno del negocio?
+
+    El recurso reservable depende del rubro: si el turno tiene `id_espacio`
+    compite contra los turnos de ese mismo espacio; si no, contra los del
+    empleado.
+    """
     if fin is None:
         return False
 
@@ -152,7 +224,9 @@ def hay_superposicion(
         Turno.fecha_hora_fin > inicio,
     )
 
-    if id_empleado is not None:
+    if id_espacio is not None:
+        query = query.filter(Turno.id_espacio == id_espacio)
+    elif id_empleado is not None:
         query = query.filter(Turno.id_empleado == id_empleado)
 
     if excluir_turno_id is not None:
@@ -186,10 +260,28 @@ def _resolver_estado_inicial(_servicio: Servicio) -> int:
 def _lanzar_error_integridad(e: IntegrityError) -> None:
     error_text = str(e.orig)
 
-    if "ex_turno_no_solapa_por_empleado" in error_text:
+    if (
+        "ex_turno_no_solapa_espacio" in error_text
+        or "ex_turno_no_solapa_por_cancha" in error_text
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail=SOLAPAMIENTO_ESPACIO_DETALLE,
+        ) from e
+
+    if (
+        "ex_turno_no_solapa_empleado" in error_text
+        or "ex_turno_no_solapa_por_empleado" in error_text
+    ):
         raise HTTPException(
             status_code=409,
             detail=SOLAPAMIENTO_DETALLE,
+        ) from e
+
+    if "chk_turno_no_empleado_y_espacio" in error_text:
+        raise HTTPException(
+            status_code=400,
+            detail="El turno debe tener un empleado o un espacio, no ambos",
         ) from e
 
     raise HTTPException(
@@ -238,6 +330,17 @@ def crear_turno(db: Session, turno: TurnoCrear, background_tasks: BackgroundTask
         id_negocio=turno.id_negocio,
         id_empleado=turno.id_empleado,
     )
+    validar_espacio_del_negocio(
+        db=db,
+        id_negocio=turno.id_negocio,
+        id_espacio=turno.id_espacio,
+    )
+    validar_recurso_unico(
+        db=db,
+        id_negocio=turno.id_negocio,
+        id_empleado=turno.id_empleado,
+        id_espacio=turno.id_espacio,
+    )
     validar_turno_dentro_del_horario(
         db=db,
         id_negocio=turno.id_negocio,
@@ -251,10 +354,15 @@ def crear_turno(db: Session, turno: TurnoCrear, background_tasks: BackgroundTask
         id_empleado=turno.id_empleado,
         inicio=turno.fecha_hora_inicio,
         fin=fecha_hora_fin,
+        id_espacio=turno.id_espacio,
     ):
         raise HTTPException(
             status_code=409,
-            detail=SOLAPAMIENTO_DETALLE,
+            detail=(
+                SOLAPAMIENTO_ESPACIO_DETALLE
+                if turno.id_espacio is not None
+                else SOLAPAMIENTO_DETALLE
+            ),
         )
 
     # Buscamos los datos del cliente para WhatsApp ANTES de crear el turno
@@ -275,6 +383,7 @@ def crear_turno(db: Session, turno: TurnoCrear, background_tasks: BackgroundTask
         id_servicio=turno.id_servicio,
         id_estado=id_estado_inicial,
         id_empleado=turno.id_empleado,
+        id_espacio=turno.id_espacio,
         fecha_hora_inicio=turno.fecha_hora_inicio,
         fecha_hora_fin=fecha_hora_fin,
         rechazado_motivo=None,
@@ -373,11 +482,15 @@ def actualizar_turno(
         else turno_db.id_servicio
     )
 
-    nuevo_id_empleado = (
-        datos.id_empleado
-        if datos.id_empleado is not None
-        else turno_db.id_empleado
-    )
+    # Cambiar de recurso reemplaza al anterior: pasar sólo id_espacio deja al
+    # turno sin empleado y viceversa. Pasar ambos se rechaza más abajo.
+    cambia_recurso = datos.id_empleado is not None or datos.id_espacio is not None
+    if cambia_recurso:
+        nuevo_id_empleado = datos.id_empleado
+        nuevo_id_espacio = datos.id_espacio
+    else:
+        nuevo_id_empleado = turno_db.id_empleado
+        nuevo_id_espacio = turno_db.id_espacio
 
     nueva_fecha_inicio = (
         datos.fecha_hora_inicio
@@ -420,6 +533,19 @@ def actualizar_turno(
         id_empleado=nuevo_id_empleado,
     )
 
+    validar_espacio_del_negocio(
+        db=db,
+        id_negocio=nuevo_id_negocio,
+        id_espacio=nuevo_id_espacio,
+    )
+    validar_recurso_unico(
+        db=db,
+        id_negocio=nuevo_id_negocio,
+        id_empleado=nuevo_id_empleado,
+        id_espacio=nuevo_id_espacio,
+        exigir_espacio_si_multi=cambia_recurso,
+    )
+
     validar_turno_dentro_del_horario(
         db=db,
         id_negocio=nuevo_id_negocio,
@@ -434,10 +560,15 @@ def actualizar_turno(
         inicio=nueva_fecha_inicio,
         fin=nueva_fecha_fin,
         excluir_turno_id=turno_id,
+        id_espacio=nuevo_id_espacio,
     ):
         raise HTTPException(
             status_code=409,
-            detail=SOLAPAMIENTO_DETALLE,
+            detail=(
+                SOLAPAMIENTO_ESPACIO_DETALLE
+                if nuevo_id_espacio is not None
+                else SOLAPAMIENTO_DETALLE
+            ),
         )
 
     # Actualizamos únicamente los campos permitidos.
@@ -449,6 +580,7 @@ def actualizar_turno(
 
     turno_db.id_servicio = nuevo_id_servicio
     turno_db.id_empleado = nuevo_id_empleado
+    turno_db.id_espacio = nuevo_id_espacio
     turno_db.fecha_hora_inicio = nueva_fecha_inicio
     turno_db.fecha_hora_fin = nueva_fecha_fin
 
@@ -510,6 +642,7 @@ def listar_turnos_por_negocio_y_rango(
     desde: datetime,
     hasta: datetime,
     id_empleado: int | None = None,
+    id_espacio: int | None = None,
 ):
     query = db.query(Turno).filter(
         Turno.id_negocio == id_negocio,
@@ -517,7 +650,9 @@ def listar_turnos_por_negocio_y_rango(
         Turno.fecha_hora_fin > desde,
     )
 
-    if id_empleado is not None:
+    if id_espacio is not None:
+        query = query.filter(Turno.id_espacio == id_espacio)
+    elif id_empleado is not None:
         query = query.filter(Turno.id_empleado == id_empleado)
 
     return query.order_by(Turno.fecha_hora_inicio.asc()).all()
@@ -529,6 +664,7 @@ def listar_turnos_disponibilidad(
     desde: datetime,
     hasta: datetime,
     id_empleado: int | None = None,
+    id_espacio: int | None = None,
 ):
     """Turnos ocupados de un negocio (solo slots, sin datos del cliente).
 
@@ -541,6 +677,7 @@ def listar_turnos_disponibilidad(
         desde,
         hasta,
         id_empleado,
+        id_espacio,
     )
 
 
@@ -617,3 +754,68 @@ def cambiar_estado_turno(
     except IntegrityError as e:
         db.rollback()
         _lanzar_error_integridad(e)
+
+
+def get_turno_con_recurso(db: Session, turno_id: int) -> dict | None:
+    """Turno serializable con su recurso: el espacio o el empleado, según cuál tenga."""
+    turno = db.query(Turno).filter(Turno.id_turno == turno_id).first()
+    return _enriquecer_con_recurso(turno) if turno else None
+
+
+def _enriquecer_con_recurso(turno: Turno) -> dict:
+    recurso = None
+    if turno.id_espacio is not None and turno.espacio:
+        recurso = {
+            "tipo": "espacio",
+            "id": turno.espacio.id_espacio,
+            "nombre": turno.espacio.nombre,
+        }
+    elif turno.id_empleado is not None and turno.empleado:
+        nombre = f"{turno.empleado.nombre} {turno.empleado.apellido or ''}".strip()
+        recurso = {"tipo": "empleado", "id": turno.empleado.id_empleado, "nombre": nombre}
+
+    return {
+        "id_turno": turno.id_turno,
+        "id_negocio": turno.id_negocio,
+        "id_servicio": turno.id_servicio,
+        "id_estado": turno.id_estado,
+        "id_empleado": turno.id_empleado,
+        "id_espacio": turno.id_espacio,
+        "fecha_hora_inicio": turno.fecha_hora_inicio,
+        "fecha_hora_fin": turno.fecha_hora_fin,
+        "recurso": recurso,
+    }
+
+
+def listar_turnos_con_recurso(
+    db: Session,
+    categoria_padre: int | None = None,
+    fecha: date | None = None,
+    estado: int | None = None,
+) -> list[dict]:
+    """Turnos de negocios de una categoría (y sus sub-categorías), con su recurso.
+
+    Endpoint público: no incluye datos del cliente.
+    """
+    query = (
+        db.query(Turno)
+        .join(Negocio, Negocio.id_negocio == Turno.id_negocio)
+        .options(joinedload(Turno.espacio), joinedload(Turno.empleado))
+        .filter(Negocio.activo.is_(True))
+    )
+
+    if categoria_padre is not None:
+        query = query.filter(
+            Negocio.id_categoria.in_(ids_con_descendientes(db, categoria_padre))
+        )
+    if fecha is not None:
+        inicio = datetime.combine(fecha, time.min)
+        query = query.filter(
+            Turno.fecha_hora_inicio >= inicio,
+            Turno.fecha_hora_inicio < inicio + timedelta(days=1),
+        )
+    if estado is not None:
+        query = query.filter(Turno.id_estado == estado)
+
+    turnos = query.order_by(Turno.fecha_hora_inicio.asc()).all()
+    return [_enriquecer_con_recurso(t) for t in turnos]

@@ -28,6 +28,11 @@ from app.schemas.categoria_schema import (
     CategoriaResponse
 )
 
+from app.schemas.espacio_schema import (
+    EspacioCreateNested,
+    EspacioResponse,
+)
+
 
 class NegocioBase(BaseModel):
     nombre: str
@@ -91,6 +96,9 @@ class NegocioCompleteCreate(NegocioCreate):
     servicios: list[ServicioCreateNested] = Field(default_factory=list)
     empleados: list[EmpleadoCreateNested] = Field(default_factory=list)
     horarios: list[HorarioNegocioCreate] = Field(default_factory=list)
+    canchas: list[EspacioCreateNested] = Field(default_factory=list)  # alias legado de `espacios`
+    espacios: list[EspacioCreateNested] = Field(default_factory=list)
+    cantidad_espacios: int | None = Field(default=None, ge=1, le=100)
 
 
 class NegocioCompleteResponse(
@@ -98,7 +106,9 @@ class NegocioCompleteResponse(
 ):
     servicios: List[ServicioResponse] = (Field(default_factory=list))
     empleados: List[EmpleadoResponse] = (Field(default_factory=list))
-    horarios: List[HorarioNegocioResponse] = Field(default_factory=list)
+    horarios: List[HorarioNegocioResponse] = (Field(default_factory=list))
+    espacios: List[EspacioResponse] = Field(default_factory=list)
+    canchas: List[EspacioResponse] = Field(default_factory=list)  # alias legado
 
 
 class NegocioUpdate(BaseModel):

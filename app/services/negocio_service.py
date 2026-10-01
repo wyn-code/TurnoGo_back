@@ -10,6 +10,7 @@ from app.models.usuario import Usuario
 from app.models.servicio import Servicio
 from app.models.empleado import Empleado
 from app.models.categoria import Categoria
+from app.models.espacio import Espacio
 from app.models.negocio_imagen import NegocioImagen
 from app.services.mapbox_service import obtener_coordenadas
 from app.schemas.negocio_schema import NegocioCompleteCreate
@@ -23,6 +24,9 @@ from datetime import datetime
 
 
 logger = logging.getLogger(__name__)
+
+# Categoría que reserva espacios (canchas) en lugar de empleados.
+CATEGORIA_DEPORTES = "Deportes"
 
 ALLOWED_FIELDS = {
     "nombre",
@@ -232,6 +236,35 @@ def generar_slug_unico(db, nombre: str):
     return slug
 
 
+def es_categoria_deportes(categoria: Categoria) -> bool:
+    """Deportes o cualquiera de sus sub-categorías (categorías jerárquicas)."""
+    def _es(c: Categoria | None) -> bool:
+        return c is not None and (c.nombre or "").strip().casefold() == CATEGORIA_DEPORTES.casefold()
+
+    return _es(categoria) or _es(categoria.parent)
+
+
+def resolver_nombres_canchas(data: NegocioCompleteCreate, es_deportes: bool) -> list[str]:
+    """Nombres de espacios a crear en el onboarding.
+
+    Prioriza la lista explícita (`espacios`, o `canchas` como alias legado); si
+    no viene y el negocio es de Deportes, genera `cantidad_espacios` numerados.
+    """
+    explicitos = [
+        cancha.nombre.strip()
+        for cancha in [*(data.espacios or []), *(data.canchas or [])]
+        if cancha.nombre and cancha.nombre.strip()
+    ]
+
+    if explicitos:
+        return explicitos
+
+    if es_deportes and data.cantidad_espacios:
+        return [f"Cancha {indice}" for indice in range(1, data.cantidad_espacios + 1)]
+
+    return []
+
+
 def crear_negocio_completo(db: Session, data: NegocioCompleteCreate):
 
     if not data.usuario_id:
@@ -335,6 +368,12 @@ def crear_negocio_completo(db: Session, data: NegocioCompleteCreate):
                 id_negocio=nuevo_negocio.id_negocio,
                 **servicio.model_dump()
             ))
+
+        # 🔥 ESPACIOS (canchas, etc.)
+        es_deportes = es_categoria_deportes(categoria)
+        nombres_espacios = resolver_nombres_canchas(data, es_deportes)
+        for numero, nombre_espacio in enumerate(nombres_espacios, start=1):
+            nuevo_negocio.espacios.append(Espacio(nombre=nombre_espacio, numero=numero))
 
         # 🔥 EMPLEADOS
         for empleado in data.empleados:
